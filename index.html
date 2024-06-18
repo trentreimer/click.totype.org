@@ -1,0 +1,616 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+
+        <title>Keyboard</title>
+
+        <script type="text/javascript">
+            /**
+             * Apple has world-class engineering talent so we can only assume the reason Safari is perenially
+             * behind the competition in supporting W3C standards is because it is not a priority.
+             * Something as fundamental as accurately measuring the available window height is assuredly within
+             * the capability of their engineers and would improve the user interface experience.
+             *
+             * While Apple desktop users can switch browsers, iOS users cannot actually do that.
+             *
+             * iOS runs Safari's rendering and Javascript engines in the background regardless of which browser
+             * interface you are using. i.e. If you are using Chrome or Firefox on iOS you are actually using
+             * Safari with a Chrome or Firefox interface. If that wasn't anti-competitive enough, they actively
+             * disable some APIs when you use those other browsers.
+             *
+             * Safari has done the internet a world of good by breaking Internet Explorer's monopoly.
+             * They should not now be working to mimic it.
+             */
+
+            const safari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+            if (safari) {
+                document.documentElement.classList.add('safari');
+            }
+
+            function windowHeight() {
+                return safari ? document.body.getBoundingClientRect().height : window.innerHeight;
+            }
+
+            function windowWidth() {
+                return safari ? document.body.getBoundingClientRect().width : window.innerWidth;
+            }
+        </script>
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+        <link href="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.snow.css" rel="stylesheet">
+        <style>
+            *, *::before, *::after {
+                box-sizing: inherit;
+            }
+
+            :root {
+                box-sizing: border-box;
+                --max-width: 1200px;
+            }
+
+            .hidden {
+                display: none;
+            }
+
+            html {
+                background: #fff;
+                color: #000;
+            }
+
+            body {
+                font-family: sans-serif;
+                margin: 0;
+                padding: 0;
+                width: 100vw;
+                height: 100vh;
+                --font-size: 1rem;
+            }
+
+            #editor-area {
+                font-size: 1rem;
+                background: #f0f0f0;
+                background: #fff;
+                color: #000;
+                display: flex;
+                justify-content: center;
+            }
+
+            #editor {
+                background: #fff;
+                color: #000;
+                width: 100%;
+                max-width: var(--max-width);
+                height: 100%;
+                font-size: max(var(--font-size), 10px);
+                font-size: max(1rem, 10px);
+                margin: 0 auto;
+            }
+
+            .ql-editor {
+                padding: 5px 10px;
+                height: calc(100% - 5px);
+                margin: 0 0 5px 0;
+            }
+
+            @media (width > 1200px) {
+                #editor {
+                    box-shadow: 0 0 7px #aaa;
+                    /*clip-path: inset(-20px -20px 0 -20px);*/
+                }
+
+                #editor-area {
+                    background-color: #f0f0f0;
+                }
+
+                @media (height > 750px) {
+                    #editor {
+                        margin-top: 10px;
+                        height: calc(100% - 10px);
+                    }
+                }
+            }
+
+            @media (height > 750px) {
+                .ql-editor {
+                    padding: 10px 10px;
+                }
+            }
+
+            #tools {
+                position: fixed;
+                bottom: 0;
+                width: 100vw;
+                background: #fff;
+            }
+
+            #toolbars {
+                font-size: inherit;
+                line-height: 1;
+                padding: 5px 15px;
+                background-color: #d0d0d0;
+                border-bottom: 1px solid #c0c0c0;
+                box-shadow: 0 0 5px #222;
+                clip-path: inset(-20px 0 0 0);
+            }
+
+            #toolbar {
+                max-width: var(--max-width);
+                margin: 0 auto;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+
+            #quill-toolbar {
+                margin: 0;
+                padding: 0;
+            }
+
+            #toolbar button {
+                font-size: inherit;
+                border: none;
+                background: none;
+                color: #222;
+                cursor: pointer;
+            }
+
+            #toolbar button:hover,
+            #toolbar button.ql-active {
+                color: #06c;
+            }
+
+            #toolbar button:not(:first-of-type) {
+                margin-left: 0.5em;
+            }
+
+            @media (width < 640px) {
+                button.ql-strike {
+                    display: none;
+                }
+            }
+
+            @media (width < 475px) {
+                #toolbar button:not(:first-of-type) {
+                    margin-left: 0.25em;
+                }
+            }
+
+            @media (width < 450px) {
+                button.ql-indent {
+                    display: none;
+                }
+            }
+
+            #keyboard {
+                padding: 0 15px;
+                font-size: inherit;
+            }
+
+            #keyboard > div {
+                display: flex;
+                gap: 10px;
+                justify-content: center;
+                margin: 10px auto;
+                max-width: var(--max-width);
+            }
+
+            #keyboard button {
+                padding: 0.25em;
+                font-family: sans-serif;
+                font-size: inherit;
+                font-weight: normal;
+                background-color: #e9e9ed;
+                color: #000;
+                border: 1px solid #8f8f9d;
+                border-radius: 5px;
+                cursor: pointer;
+                box-shadow: 0 0 4px #bbb;
+            }
+
+            #keyboard button:hover {
+                background-color: #cfcfd6;
+            }
+        </style>
+        <style>
+            /**
+             * Editor scrollbar
+             */
+           .ql-editor::-webkit-scrollbar {
+                width: 2.5rem;
+                height: 2.5rem;
+            }
+
+            .ql-editor::-webkit-scrollbar-track {
+                background: #f1f1f1;
+                background: #fff;
+                background: #e9e9ed;
+                cursor: default;
+            }
+
+            .ql-editor::-webkit-scrollbar-thumb {
+                background: #c1c1c1;
+                background: #d0d0d0;
+                border: 0px solid #8f8f9d;
+                border-radius: 5px;
+                border-radius: 0px;
+                cursor: default;
+                cursor: grab;
+            }
+
+            .ql-editor::-webkit-scrollbar-thumb:hover {
+                background: #bbb;
+                border-width: 0px;
+            }
+
+            .ql-editor::-webkit-scrollbar-thumb:active {
+                cursor: grabbing;
+            }
+
+            .ql-editor::-webkit-scrollbar-button {
+                height: 2.5rem;
+                width: 2.5rem;
+                border: 0px solid #8f8f9d;
+                border-radius: 0px;
+                background: #e9e9ed;
+                cursor: pointer;
+            }
+
+            .ql-editor::-webkit-scrollbar-button:hover {
+                background: #cfcfd6;
+                border-width: 0px;
+            }
+
+            /* Up button */
+            .ql-editor::-webkit-scrollbar-button:single-button:vertical:decrement {
+                background-position: center calc(50% + 0.2em);
+                background-size: 1em;
+                background-repeat: no-repeat;
+                background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" fill="rgb(0, 0, 0,)"><polygon points="50,00 0,50 100,50"/></svg>');
+                border-bottom: 0px solid #8f8f9d;
+            }
+
+            /* Down button */
+            .ql-editor::-webkit-scrollbar-button:single-button:vertical:increment {
+                background-position: center calc(50% + 0.25em);
+                background-size: 1em;
+                background-repeat: no-repeat;
+                background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" fill="rgb(0, 0, 0)"><polygon points="0,0 100,0 50,50"/></svg>');
+                border-top: 0px solid #8f8f9d;
+            }
+        </style>
+
+        <script src="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.js"></script>
+    </head>
+    <body>
+
+        <div id="editor-area">
+            <div id="editor"></div>
+        </div>
+
+        <div id="tools">
+            <div id="toolbars">
+                <div id="toolbar">
+                    <div id="quill-toolbar">
+                        <button class="ql-bold"><i class="fas fa-bold"></i></button>
+                        <button class="ql-underline"><i class="fas fa-underline"></i></button>
+                        <button class="ql-italic"><i class="fas fa-italic"></i></button>
+                        <button class="ql-indent" value="+1"><i class="fas fa-indent"></i></button>
+                        <button class="ql-indent" value="-1"><i class="fas fa-outdent"></i></button>
+                        <button class="ql-list" value="bullet"><i class="fas fa-list"></i></button>
+                        <button class="ql-list" value="ordered"><i class="fas fa-list-ol"></i></button>
+                        <button class="ql-strike"><i class="fas fa-strikethrough"></i></button>
+                    </div>
+                    <div id="custom-toolbar">
+                        <!-- <button class="delete-text"><i class="fa fa-eraser"></i> Erase All</button> -->
+                        <button class="cut-text"><i class="fas fa-cut"></i> Cut All</button>
+                        <button class="copy-text"><i class="far fa-copy"></i> Copy All</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="keyboard">
+            </div>
+        </div>
+
+
+
+        <script>
+        (function() {
+            const quill = new Quill('#editor', {
+                //theme: 'snow',
+                modules: {
+                    toolbar: '#quill-toolbar',
+                }
+            });
+
+            quill.focus();
+
+            function copyAllText() {
+                const range = document.createRange();
+                const selection = window.getSelection();
+
+                range.selectNodeContents(quill.root);
+
+                selection.removeAllRanges();
+                selection.addRange(range);
+
+                try {
+                    document.execCommand('copy');
+                } catch (error) {
+                    console.error('Failed to copy content', error);
+                }
+            }
+
+            function applyShift() {
+                document.querySelector('#keyboard').classList.add('shift');
+
+                document.querySelectorAll('#keyboard button[data-shift-text]').forEach(button => {
+                    button.textContent = button.getAttribute('data-shift-text');
+                });
+            }
+
+            function removeShift() {
+                document.querySelector('#keyboard').classList.remove('shift');
+
+                document.querySelectorAll('#keyboard button[data-shift-text][data-text]').forEach(button => {
+                    button.textContent = button.getAttribute('data-text');
+                });
+            }
+
+            function toggleShift() {
+                if (document.querySelector('#keyboard').classList.contains('shift')) {
+                    removeShift();
+                } else {
+                    applyShift();
+                }
+            }
+
+            document.querySelectorAll('.copy-text').forEach(e => {
+                e.addEventListener('click', copyAllText);
+            });
+
+            document.querySelectorAll('.cut-text').forEach(e => {
+                e.addEventListener('click', function(event) {
+                    copyAllText();
+                    quill.setText('');
+                    quill.focus();
+                });
+            });
+
+            document.querySelectorAll('.delete-text').forEach(e => {
+                e.addEventListener('click', function(event) {
+                    quill.setText('');
+                    quill.focus();
+                });
+            });
+
+            const keyboards = {
+                '1': [
+                    ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', {text: '←', key: 'Backspace'}],
+                    ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', '\'', '"'],
+                    ['z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '?', '!'],
+                    [
+                        {text: 'Shift ↑', key: 'Shift', shiftText: 'Shift ↓', shiftKey: 'Shift', width: '15%'},
+                        {text: 'Space', key: ' ', width: '50%'},
+                        {text: '123#@', key: 'Keyboard 2', width: '25%'},
+                        {text: '↲', key:  'Enter', width: '10%'}
+                    ],
+                ],
+                '2': [
+                    ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
+                    ['@', '#', ':', '/', '_', '-', '+', '$', '%', '&', '*'],
+                    ['(', ')', '[', ']', '<', '>', '~', '`', '^'],
+                    [
+                        {text: '←', key: 'Backspace', width: '12.5%'},
+                        {text: 'Space', key: ' ', width: '50%'},
+                        {text: 'ABC.,?', key: 'Keyboard 1', width: '25%'},
+                        {text: '↲', key:  'Enter', width: '12.5%'}
+                    ],
+                ],
+            };
+
+            function setKeyboard(keyboard = '1') {
+                if (typeof keyboards[keyboard] !== 'undefined') {
+                    document.querySelector('#keyboard').classList.remove('shift');
+                    document.querySelectorAll('#keyboard > div').forEach(e => e.remove());
+
+                    const buttons = keyboards[keyboard];
+
+                    for (const row of buttons) {
+                        const div = document.createElement('div');
+                        const buttonWidth = Math.floor(100 / row.length);
+
+                        for (const b of row) {
+                            const button = document.createElement('button');
+
+                            if (typeof b === 'string') {
+                                button.textContent = b;
+                                button.setAttribute('data-text', b);
+                                button.setAttribute('data-key', b);
+
+                                if (b.match(/[a-z]/)) {
+                                    button.setAttribute('data-shift-text', b.toUpperCase());
+                                    button.setAttribute('data-shift-key', b.toUpperCase());
+                                }
+                            } else if (typeof b.text === 'string' && typeof b.key === 'string') {
+                                button.textContent = b.text;
+                                button.setAttribute('data-text', b.text);
+                                button.setAttribute('data-key', b.key);
+
+                                if (typeof b.shiftText === 'string' && typeof b.shiftKey === 'string') {
+                                    button.setAttribute('data-shift-text', b.shiftText);
+                                    button.setAttribute('data-shift-key', b.shiftKey);
+                                }
+                            }
+
+                            button.style.width = typeof b.width === 'string' ? b.width : `${buttonWidth}%`;
+                            div.appendChild(button);
+                        }
+
+                        document.querySelector('#keyboard').appendChild(div);
+                    }
+                }
+            }
+
+            document.querySelector('#keyboard').addEventListener('click', function(event) {
+                event.preventDefault();
+                const button = event.target.closest('button');
+
+                if (button) {
+                    let selection = quill.getSelection();
+
+                    if (selection === null) {
+                        console.log('quill.getSelection() initially returned null');
+                        quill.focus();
+                        selection = quill.getSelection();
+
+                        if (selection === null) {
+                            console.log('quill.getSelection() returned null even after applying focus');
+                            return;
+                        }
+                    }
+
+                    const shift = document.querySelector('#keyboard').classList.contains('shift');
+                    const key = shift && button.getAttribute('data-shift-key') !== null ? button.getAttribute('data-shift-key') : button.getAttribute('data-key');
+                    //console.log(key);
+
+                    quill.setSelection(selection);
+                    if (selection.length) quill.deleteText(selection.index, selection.length);
+
+                    if (key === 'Shift') {
+                        toggleShift();
+                    } else if (key === 'Enter') {
+                        if (selection.length) quill.deleteText(selection.index, selection.length);
+                        quill.insertText(selection.index, "\n");
+                    } else if (key === 'Backspace') {
+                        if (selection.length) { // This was already taken care of
+                        } else if (selection.index > 0) {
+                            quill.deleteText(selection.index - 1, 1);
+                            quill.setSelection(selection.index - 1, 0);
+                        } else {
+                            return;
+                        }
+                    } else if (key === 'Keyboard 1') {
+                        setKeyboard('1');
+                        return;
+                    } else if (key === 'Keyboard 2') {
+                        setKeyboard('2');
+                        return;
+                    } else {
+                        if (selection.length) quill.deleteText(selection.index, selection.length);
+                        quill.insertText(selection.index, key);
+                    }
+
+                    quill.scrollSelectionIntoView();
+                    if (shift && key !== 'Shift') toggleShift();
+                }
+            });
+
+            setKeyboard('1');
+            applyShift();
+
+            function getEditorHeight() {
+                return document.querySelector('#editor').getBoundingClientRect().height;
+            }
+
+            function getToolsHeight() {
+                return document.querySelector('#tools').getBoundingClientRect().height;
+            }
+
+            function sizeDisplay() {
+                const wh = windowHeight();
+                const ww = windowWidth();
+
+                // Get the pixel size of a 1rem font
+                document.body.style.fontSize = '1rem';
+                const remPx = parseInt(getComputedStyle(document.body).getPropertyValue('font-size'));
+
+                // Set an initial body font size
+                document.body.style.fontSize = wh < 600 ? '1.5rem' : '2rem';
+                let fontSize = parseInt(getComputedStyle(document.body).getPropertyValue('font-size'));
+
+                // Ensure the toolbar isn't too wide for the available screen width
+                let toolbarFontSize = fontSize;
+                document.querySelector('#toolbars').style.fontSize = `${toolbarFontSize}px`;
+
+                const toolButtonsWrap = function() {
+                    const buttonTops = [];
+
+                    document.querySelectorAll('#toolbars button.ql-strike').forEach(e => e.classList.remove('hidden'));
+
+                    document.querySelectorAll('#toolbars button').forEach(function(e) {
+                        if (getComputedStyle(e).getPropertyValue('display') != 'none') {
+                            buttonTops.push(e.getBoundingClientRect().top);
+                        }
+                    });
+
+                    let wrapping = false;
+
+                    for (let i = 1; i < buttonTops.length; i ++) {
+                        if (buttonTops[i] > buttonTops[i - 1]) {
+                            wrapping = true;
+                            break;
+                        }
+                    }
+
+                    return wrapping;
+                }
+
+                while (toolbarFontSize > remPx && toolButtonsWrap()) {
+                    toolbarFontSize --;
+                    document.querySelector('#toolbars').style.fontSize = `${toolbarFontSize}px`;
+                }
+
+                // Ensure the keyboard doesn't take up too much of the available screen height
+                while (fontSize > remPx && wh - getToolsHeight() < (fontSize * 1.25 * 5 + 20)) {
+                    fontSize --;
+                    document.body.style.fontSize = `${fontSize}px`;
+                }
+
+                // Ensure the keyboard isn't too wide for the available screen width
+                const keysWrap = function() {
+                    let buttonHeight;
+                    const buttons = Array.from(document.querySelectorAll('#keyboard button'));
+
+                    for (const b of buttons) {
+                        const r = b.getBoundingClientRect();
+
+                        if (r.left < 10) {
+                            return true;
+                        } else {
+                            const bh = r.height;
+
+                            if (typeof buttonHeight === 'undefined') {
+                                buttonHeight = bh;
+                            } else if (bh > buttonHeight) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+
+                while (fontSize > remPx && keysWrap()) {
+                    fontSize --;
+                    document.body.style.fontSize = `${fontSize}px`;
+                }
+
+                const editorHeight = `${wh - getToolsHeight()}px`;
+                document.querySelector('#editor-area').style.height = editorHeight;
+            }
+
+            setTimeout(sizeDisplay, 0);
+            window.addEventListener('resize', sizeDisplay);
+
+            // Make it easy to focus the editor
+            document.querySelector('#editor-area').addEventListener('click', function(event) {
+                if (document.activeElement !== quill.root) {
+                    quill.focus();
+                }
+            });
+        })();
+        </script>
+    </body>
+</html>

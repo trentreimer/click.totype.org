@@ -184,6 +184,32 @@
                 }
             }
 
+            #suggestions {
+                margin: 0 auto;
+                padding: 10px 0 0 0;
+                max-width: var(--max-width);
+                font-size: 1em;
+                line-height: 1;
+                height: calc(10px + 1.1em);
+                overflow: hidden;
+                display: flex;
+                gap: 20px;
+            }
+
+            #suggestions button {
+                cursor: pointer;
+                border: none;
+                background: transparent;
+                color: inherit;
+                padding: 0;
+                font-size: inherit;
+                white-space: nowrap;
+            }
+
+            #suggestions button:nth-child(n + 2) {
+                margin-left: 10px;
+            }
+
             #keyboard {
                 padding: 0 15px;
                 font-size: inherit;
@@ -311,8 +337,8 @@
                 </div>
             </div>
 
-            <div id="keyboard">
-            </div>
+            <div id="suggestions"></div>
+            <div id="keyboard"></div>
         </div>
 
 
@@ -327,6 +353,8 @@
             });
 
             quill.focus();
+
+            const maxSuggestions = 20;
 
             function copyAllText() {
                 const range = document.createRange();
@@ -387,6 +415,46 @@
                 });
             });
 
+            /////////////////////////////////////////////////////////////////////////////////
+            // Set the autocomplete library
+            // wordFile can be any text file containing words separated by newline characters
+            let autocompleteLibrary = {};
+
+            async function setAutocompleteLibrary(wordFile) {
+                autocompleteLibrary = {};
+                let fileContents;
+
+                try {
+                    fileContents = await fetch(wordFile).then(response => response.text());
+                } catch (err) {
+                    console.error(err);
+                    autocompleteLibrary = {};
+                    return;
+                }
+
+                if (fileContents) {
+                    const lines = fileContents.split("\n");
+
+                    for (const line of lines) {
+                        //const word = line.trim().toUpperCase().replaceAll('ʼ', '\'').replaceAll('’', '\'').replace(/[^\w|'|\-].*$/, '');
+                        const word = line.trim().replaceAll('ʼ', '\'').replaceAll('’', '\'').replace(/[^\w|'|\-].*$/, '');
+
+                        if (word.length > 1) {
+                            const firstLetter = word.charAt(0).toUpperCase();
+
+                            if (!autocompleteLibrary[firstLetter]) {
+                                autocompleteLibrary[firstLetter] = [];
+                            }
+
+                            autocompleteLibrary[firstLetter].push(word);
+                        }
+                    }
+                }
+            }
+
+            setAutocompleteLibrary('autocomplete/words.en.txt');
+            /////////////////////////////////////////////////////////////////////////////////
+
             const keyboards = {
                 '1': [
                     ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', {text: '←', key: 'Backspace'}],
@@ -412,8 +480,12 @@
                 ],
             };
 
+            let activeKeyboard;
+
             function setKeyboard(keyboard = '1') {
                 if (typeof keyboards[keyboard] !== 'undefined') {
+                    activeKeyboard = keyboard;
+
                     document.querySelector('#keyboard').classList.remove('shift');
                     document.querySelectorAll('#keyboard > div').forEach(e => e.remove());
 
@@ -455,58 +527,112 @@
                 }
             }
 
-            document.querySelector('#keyboard').addEventListener('click', function(event) {
-                event.preventDefault();
-                const button = event.target.closest('button');
+            document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
+                entryElm.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    const button = event.target.closest('button');
 
-                if (button) {
-                    let selection = quill.getSelection();
-
-                    if (selection === null) {
-                        console.log('quill.getSelection() initially returned null');
-                        quill.focus();
-                        selection = quill.getSelection();
+                    if (button) {
+                        let selection = quill.getSelection();
 
                         if (selection === null) {
-                            console.log('quill.getSelection() returned null even after applying focus');
-                            return;
+                            console.log('quill.getSelection() initially returned null');
+                            quill.focus();
+                            selection = quill.getSelection();
+
+                            if (selection === null) {
+                                console.log('quill.getSelection() returned null even after applying focus');
+                                return;
+                            }
                         }
-                    }
 
-                    const shift = document.querySelector('#keyboard').classList.contains('shift');
-                    const key = shift && button.getAttribute('data-shift-key') !== null ? button.getAttribute('data-shift-key') : button.getAttribute('data-key');
-                    //console.log(key);
+                        const shift = document.querySelector('#keyboard').classList.contains('shift');
+                        const key = shift && button.getAttribute('data-shift-key') !== null ? button.getAttribute('data-shift-key') : button.getAttribute('data-key');
+                        //console.log(key);
 
-                    quill.setSelection(selection);
-                    if (selection.length) quill.deleteText(selection.index, selection.length);
-
-                    if (key === 'Shift') {
-                        toggleShift();
-                    } else if (key === 'Enter') {
+                        quill.setSelection(selection);
                         if (selection.length) quill.deleteText(selection.index, selection.length);
-                        quill.insertText(selection.index, "\n");
-                    } else if (key === 'Backspace') {
-                        if (selection.length) { // This was already taken care of
-                        } else if (selection.index > 0) {
-                            quill.deleteText(selection.index - 1, 1);
-                            quill.setSelection(selection.index - 1, 0);
+
+                        if (key === 'Shift') {
+                            toggleShift();
+                        } else if (key === 'Enter') {
+                            if (selection.length) quill.deleteText(selection.index, selection.length);
+                            quill.insertText(selection.index, "\n");
+                        } else if (key === 'Backspace') {
+                            if (selection.length) { // This was already taken care of
+                            } else if (selection.index > 0) {
+                                quill.deleteText(selection.index - 1, 1);
+                                quill.setSelection(selection.index - 1, 0);
+                            } else {
+                                return;
+                            }
+                        } else if (key === 'Keyboard 1') {
+                            setKeyboard('1');
+                            return;
+                        } else if (key === 'Keyboard 2') {
+                            setKeyboard('2');
+                            return;
                         } else {
-                            return;
+                            if (selection.length) quill.deleteText(selection.index, selection.length);
+                            quill.insertText(selection.index, key);
                         }
-                    } else if (key === 'Keyboard 1') {
-                        setKeyboard('1');
-                        return;
-                    } else if (key === 'Keyboard 2') {
-                        setKeyboard('2');
-                        return;
-                    } else {
-                        if (selection.length) quill.deleteText(selection.index, selection.length);
-                        quill.insertText(selection.index, key);
-                    }
 
-                    quill.scrollSelectionIntoView();
-                    if (shift && key !== 'Shift') toggleShift();
-                }
+                        document.querySelectorAll('#suggestions button').forEach(e => e.remove());
+
+                        if ([' ', 'Enter'].includes(key) && activeKeyboard == '1') {
+                            // Automatically toggle to uppercase after ending a sentence
+                            if (key === 'Enter' || ['.', '?', '!'].includes(quill.root.textContent.charAt(selection.index - 1))) {
+                                applyShift();
+                            }
+                        } else if (key.length === 1 && key.match(/[a-zA-Z]/)) {
+                            // Autocomplete suggestions
+                            let wordStartPos = 0;
+
+                            selection = quill.getSelection();
+
+                            if (selection.index > 1) {
+                                for (let i = selection.index - 1; i > 0; i --) {
+                                    if (wordStartPos === 0 && /[^a-zA-Z]/.test(quill.root.textContent.charAt(i))) {
+                                        wordStartPos = i + 1;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (wordStartPos < selection.index) {
+                                const currentWord = quill.root.textContent.substring(wordStartPos, selection.index);
+                                const firstLetter = currentWord.charAt(0).toUpperCase();
+
+                                if (autocompleteLibrary[firstLetter]) {
+                                    const suggestions = [];
+
+                                    for (const suggestion of autocompleteLibrary[firstLetter]) {
+                                        if (suggestion.length > currentWord.length && suggestion.substring(0, currentWord.length).toLowerCase() == currentWord.toLowerCase()) {
+                                            suggestions.push(currentWord + suggestion.substring(currentWord.length));
+                                        }
+
+                                        if (suggestions.length == maxSuggestions) break;
+                                    }
+
+                                    for (const suggestion of suggestions) {
+                                        const button = document.createElement('button');
+
+                                        button.setAttribute('data-key', suggestion.substring(currentWord.length));
+                                        button.textContent = suggestion;
+
+                                        document.getElementById('suggestions').appendChild(button);
+                                    }
+                                }
+                            }
+                        }
+
+                        quill.scrollSelectionIntoView();
+
+                        if (shift && key !== 'Shift') {
+                            toggleShift();
+                        }
+                    }
+                });
             });
 
             setKeyboard('1');

@@ -184,30 +184,53 @@
                 }
             }
 
+            #suggestions-line {
+                margin: 10px auto 0 auto;
+                max-width: var(--max-width);
+                height: calc(12px + 1.1em);
+                text-align: center;
+            }
+
             #suggestions {
                 margin: 0 auto;
-                padding: 10px 0 0 0;
                 max-width: var(--max-width);
                 font-size: 1em;
                 line-height: 1;
-                height: calc(10px + 1.1em);
                 overflow: hidden;
-                display: flex;
-                gap: 20px;
+                display: inline-flex;
+                gap: 15px;
             }
 
             #suggestions button {
                 cursor: pointer;
                 border: none;
+                border-radius: 5px;
                 background: transparent;
                 color: inherit;
-                padding: 0;
+                padding: 0 5px;
                 font-size: inherit;
                 white-space: nowrap;
+
+                font-family: sans-serif;
+                /*font-size: inherit;*/
+                font-weight: normal;
+                background-color: #e9e9ed;
+                color: #000;
+                border: 1px solid #8f8f9d;
+                border-radius: 5px;
+                cursor: pointer;
+                box-shadow: 0 0 4px #bbb;
             }
 
-            #suggestions button:nth-child(n + 2) {
-                margin-left: 10px;
+            #suggestions button:hover {
+                /*background-color: #dfdfe6;*/
+                background-color: #cfcfd6;
+            }
+
+            @media (width <= 1200px) {
+                #suggestions {
+                    padding-left: 10px;
+                }
             }
 
             #keyboard {
@@ -337,7 +360,9 @@
                 </div>
             </div>
 
-            <div id="suggestions"></div>
+            <div id="suggestions-line">
+                <div id="suggestions"></div>
+            </div>
             <div id="keyboard"></div>
         </div>
 
@@ -354,7 +379,7 @@
 
             quill.focus();
 
-            const maxSuggestions = 20;
+            const maxSuggestions = 5;
 
             function copyAllText() {
                 const range = document.createRange();
@@ -428,7 +453,6 @@
                     fileContents = await fetch(wordFile).then(response => response.text());
                 } catch (err) {
                     console.error(err);
-                    autocompleteLibrary = {};
                     return;
                 }
 
@@ -527,26 +551,34 @@
                 }
             }
 
+            function getSelection() {
+                let selection = quill.getSelection();
+
+                if (selection === null) {
+                    console.log('quill.getSelection() initially returned null');
+                    quill.focus();
+                    selection = quill.getSelection();
+
+                    if (selection === null) {
+                        console.log('quill.getSelection() returned null even after applying focus');
+                        return null;
+                    }
+                }
+
+                return selection;
+            }
+
             document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
                 entryElm.addEventListener('click', function(event) {
                     event.preventDefault();
                     const button = event.target.closest('button');
 
                     if (button) {
-                        let selection = quill.getSelection();
+                        const selection = getSelection();
 
-                        if (selection === null) {
-                            console.log('quill.getSelection() initially returned null');
-                            quill.focus();
-                            selection = quill.getSelection();
+                        if (selection === null) return;
 
-                            if (selection === null) {
-                                console.log('quill.getSelection() returned null even after applying focus');
-                                return;
-                            }
-                        }
-
-                        const shift = document.querySelector('#keyboard').classList.contains('shift');
+                        let shift = document.querySelector('#keyboard').classList.contains('shift');
                         const key = shift && button.getAttribute('data-shift-key') !== null ? button.getAttribute('data-shift-key') : button.getAttribute('data-key');
                         //console.log(key);
 
@@ -581,18 +613,20 @@
 
                         if ([' ', 'Enter'].includes(key) && activeKeyboard == '1') {
                             // Automatically toggle to uppercase after ending a sentence
-                            if (key === 'Enter' || ['.', '?', '!'].includes(quill.root.textContent.charAt(selection.index - 1))) {
+                            if (key === 'Enter' || ['.', '?', '!'].includes(quill.getText(selection.index - 1, 1))) {
                                 applyShift();
+                                shift = false;
                             }
                         } else if (key.length === 1 && key.match(/[a-zA-Z]/)) {
                             // Autocomplete suggestions
                             let wordStartPos = 0;
 
-                            selection = quill.getSelection();
+                            const selection = getSelection();
+                            const str = quill.getText(0, selection.index);
 
                             if (selection.index > 1) {
                                 for (let i = selection.index - 1; i > 0; i --) {
-                                    if (wordStartPos === 0 && /[^a-zA-Z]/.test(quill.root.textContent.charAt(i))) {
+                                    if (wordStartPos === 0 && /[^a-zA-Z]/.test(str.charAt(i))) {
                                         wordStartPos = i + 1;
                                         break;
                                     }
@@ -600,7 +634,7 @@
                             }
 
                             if (wordStartPos < selection.index) {
-                                const currentWord = quill.root.textContent.substring(wordStartPos, selection.index);
+                                const currentWord = str.substring(wordStartPos, selection.index);
                                 const firstLetter = currentWord.charAt(0).toUpperCase();
 
                                 if (autocompleteLibrary[firstLetter]) {
@@ -613,6 +647,8 @@
 
                                         if (suggestions.length == maxSuggestions) break;
                                     }
+
+                                    suggestions.sort();
 
                                     for (const suggestion of suggestions) {
                                         const button = document.createElement('button');

@@ -568,6 +568,9 @@
                 return selection;
             }
 
+            // Track when spaces have been added automatically
+            let autoSpace = false;
+
             document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
                 entryElm.addEventListener('click', function(event) {
                     event.preventDefault();
@@ -585,39 +588,76 @@
                         quill.setSelection(selection);
                         if (selection.length) quill.deleteText(selection.index, selection.length);
 
-                        if (key === 'Shift') {
+                        if (entryElm.id === 'keyboard' && key === 'Shift') {
+                            autoSpace = false;
                             toggleShift();
-                        } else if (key === 'Enter') {
+                        } else if (entryElm.id === 'keyboard' && key === 'Enter') {
+                            autoSpace = false;
                             if (selection.length) quill.deleteText(selection.index, selection.length);
                             quill.insertText(selection.index, "\n");
-                        } else if (key === 'Backspace') {
+                            //applyShift();
+                            shift = false;
+                        } else if (entryElm.id === 'keyboard' && key === 'Backspace') {
+                            autoSpace = false;
+
                             if (selection.length) { // This was already taken care of
                             } else if (selection.index > 0) {
                                 quill.deleteText(selection.index - 1, 1);
                                 quill.setSelection(selection.index - 1, 0);
+
+                                if (selection.index < 2 && activeKeyboard == '1') {
+                                    applyShift();
+                                    shift = false;
+                                }
                             } else {
                                 return;
                             }
-                        } else if (key === 'Keyboard 1') {
+                        } else if (entryElm.id === 'keyboard' && key === 'Keyboard 1') {
+                            autoSpace = false;
                             setKeyboard('1');
                             return;
-                        } else if (key === 'Keyboard 2') {
+                        } else if (entryElm.id === 'keyboard' && key === 'Keyboard 2') {
+                            autoSpace = false;
                             setKeyboard('2');
                             return;
                         } else {
                             if (selection.length) quill.deleteText(selection.index, selection.length);
+
                             quill.insertText(selection.index, key);
+
+                            // Auto-spacing
+                            if (['.', ',', '?', '!', ':'].includes(key)) {
+                                let spaceRemoved = false;
+                                const prevChars = quill.getText(selection.index - 2, 2).split('');
+
+                                if (autoSpace && prevChars.length && prevChars[prevChars.length - 1] == ' ') {
+                                    quill.deleteText(selection.index - 1, 1);
+                                    spaceRemoved = true;
+                                }
+
+                                if (prevChars.length && prevChars[0].match(/[a-zA-Z]/)) {
+                                    const point = spaceRemoved ? selection.index : selection.index + 1;
+                                    quill.insertText(point, ' ');
+                                    autoSpace = true;
+
+                                    if (['.', '?', '!'].includes(key)) {
+                                        applyShift();
+                                        shift = false;
+                                    }
+                                } else {
+                                    autoSpace = false;
+                                }
+                            } else if (entryElm.id === 'suggestions') {
+                                quill.insertText(selection.index + key.length, ' ');
+                                autoSpace = true;
+                            } else {
+                                autoSpace = false;
+                            }
                         }
 
                         document.querySelectorAll('#suggestions button').forEach(e => e.remove());
 
-                        if ([' ', 'Enter'].includes(key) && activeKeyboard == '1') {
-                            // Automatically toggle to uppercase after ending a sentence
-                            if (key === 'Enter' || ['.', '?', '!'].includes(quill.getText(selection.index - 1, 1))) {
-                                applyShift();
-                                shift = false;
-                            }
-                        } else if (key.length === 1 && key.match(/[a-zA-Z]/)) {
+                        if (entryElm.id === 'keyboard' && key.length === 1 && key.match(/[a-zA-Z]/)) {
                             // Autocomplete suggestions
                             let wordStartPos = 0;
 
@@ -664,7 +704,7 @@
 
                         quill.scrollSelectionIntoView();
 
-                        if (shift && key !== 'Shift') {
+                        if (shift && !(entryElm.id === 'keyboard' && key === 'Shift')) {
                             toggleShift();
                         }
                     }

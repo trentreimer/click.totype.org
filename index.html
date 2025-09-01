@@ -184,55 +184,6 @@
                 }
             }
 
-            #suggestions-line {
-                margin: 10px auto 0 auto;
-                max-width: var(--max-width);
-                height: calc(12px + 1.1em);
-                text-align: center;
-            }
-
-            #suggestions {
-                margin: 0 auto;
-                max-width: var(--max-width);
-                font-size: 1em;
-                line-height: 1;
-                overflow: hidden;
-                display: inline-flex;
-                gap: 15px;
-            }
-
-            #suggestions button {
-                cursor: pointer;
-                border: none;
-                border-radius: 5px;
-                background: transparent;
-                color: inherit;
-                padding: 0 5px;
-                font-size: inherit;
-                white-space: nowrap;
-
-                font-family: sans-serif;
-                /*font-size: inherit;*/
-                font-weight: normal;
-                background-color: #e9e9ed;
-                color: #000;
-                border: 1px solid #8f8f9d;
-                border-radius: 5px;
-                cursor: pointer;
-                box-shadow: 0 0 4px #bbb;
-            }
-
-            #suggestions button:hover {
-                /*background-color: #dfdfe6;*/
-                background-color: #cfcfd6;
-            }
-
-            @media (width <= 1200px) {
-                #suggestions {
-                    padding-left: 10px;
-                }
-            }
-
             #keyboard {
                 padding: 0 15px;
                 font-size: inherit;
@@ -261,6 +212,55 @@
 
             #keyboard button:hover {
                 background-color: #cfcfd6;
+            }
+
+            #suggestions-line {
+                margin: 10px auto 0 auto;
+                max-width: var(--max-width);
+                height: calc(12px + 1.1em);
+                text-align: center;
+            }
+
+            #suggestions {
+                margin: 0 auto;
+                max-width: var(--max-width);
+                font-size: 1em;
+                line-height: 1;
+                overflow: hidden;
+                display: inline-flex;
+                gap: 15px;
+            }
+
+            #suggestions button {
+                cursor: pointer;
+                border: none;
+                border-radius: 5px;
+                background: transparent;
+                color: inherit;
+                padding: 0 0.4em;
+                font-size: inherit;
+                white-space: nowrap;
+
+                font-family: sans-serif;
+                /*font-size: inherit;*/
+                font-weight: normal;
+                background-color: #e9e9ed;
+                color: #000;
+                border: 1px solid #8f8f9d;
+                border-radius: 5px;
+                cursor: pointer;
+                box-shadow: 0 0 4px #bbb;
+            }
+
+            #suggestions button:hover {
+                /*background-color: #dfdfe6;*/
+                background-color: #cfcfd6;
+            }
+
+            @media (width <= 1200px) {
+                #suggestions {
+                    padding-left: 10px;
+                }
             }
         </style>
         <style>

@@ -442,8 +442,15 @@
 
             /////////////////////////////////////////////////////////////////////////////////
             // Set the autocomplete library
-            // wordFile can be any text file containing words separated by newline characters
+            // word files are just text files containing words separated by newline characters
+            const autocompleteLanguages = ['en'];
+            const autocompleteLibraryFiles = {
+                'en': 'autocomplete/google-10000-english-no-swears.txt',
+                //'en': 'words.en.txt',
+            };
+
             let autocompleteLibrary = {};
+            let autocompleteLanguage;
 
             async function setAutocompleteLibrary(wordFile) {
                 autocompleteLibrary = {};
@@ -460,7 +467,6 @@
                     const lines = fileContents.split("\n");
 
                     for (const line of lines) {
-                        //const word = line.trim().toUpperCase().replaceAll('ʼ', '\'').replaceAll('’', '\'').replace(/[^\w|'|\-].*$/, '');
                         const word = line.trim().replaceAll('ʼ', '\'').replaceAll('’', '\'').replace(/[^\w|'|\-].*$/, '');
 
                         if (word.length > 1) {
@@ -476,7 +482,7 @@
                 }
             }
 
-            setAutocompleteLibrary('autocomplete/words.en.txt');
+            setAutocompleteLibrary(autocompleteLibraryFiles[autocompleteLanguages[0]]);
             /////////////////////////////////////////////////////////////////////////////////
 
             const keyboards = {

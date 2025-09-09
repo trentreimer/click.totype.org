@@ -445,8 +445,6 @@
             // word files are just text files containing words separated by newline characters
             const autocompleteLanguages = ['en'];
             const autocompleteLibraryFiles = {
-                //'en': 'autocomplete/google-10000-english-no-swears.txt',
-                //'en': 'autocomplete/words.en.txt',
                 'en': 'autocomplete/en.autocomplete.txt',
             };
 
@@ -458,7 +456,13 @@
                 let fileContents;
 
                 try {
-                    fileContents = await fetch(wordFile).then(response => response.text());
+                    const response = await fetch(wordFile);
+
+                    if (response.ok) {
+                        fileContents = await response.text();
+                    } else {
+                        throw new Error(`Unable to fetch ${wordFile}`);
+                    }
                 } catch (err) {
                     console.error(err);
                     return;
@@ -684,7 +688,7 @@
                                 const currentWord = str.substring(wordStartPos, selection.index);
                                 const firstLetter = currentWord.charAt(0).toUpperCase();
 
-                                if (autocompleteLibrary[firstLetter]) {
+                                if (autocompleteLibrary[firstLetter] && Array.isArray(autocompleteLibrary[firstLetter])) {
                                     const suggestions = [];
 
                                     for (const suggestion of autocompleteLibrary[firstLetter]) {

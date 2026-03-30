@@ -1,0 +1,220 @@
+*, *::before, *::after {
+    box-sizing: inherit;
+}
+
+:root {
+    box-sizing: border-box;
+    --max-width: 1200px;
+}
+
+.hidden {
+    display: none;
+}
+
+html {
+    background: #fff;
+    color: #000;
+}
+
+body {
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    --font-size: 1rem;
+}
+
+#editor-area {
+    font-size: 1rem;
+    background: #f0f0f0;
+    background: #fff;
+    color: #000;
+    display: flex;
+    justify-content: center;
+}
+
+#editor {
+    background: #fff;
+    color: #000;
+    width: 100%;
+    max-width: var(--max-width);
+    height: 100%;
+    font-size: max(var(--font-size), 10px);
+    font-size: max(1rem, 10px);
+    margin: 0 auto;
+}
+
+.ql-editor {
+    padding: 5px 10px;
+    height: calc(100% - 5px);
+    margin: 0 0 5px 0;
+}
+
+@media (width > 1200px) {
+    #editor {
+        box-shadow: 0 0 7px #aaa;
+        /*clip-path: inset(-20px -20px 0 -20px);*/
+    }
+
+    #editor-area {
+        background-color: #f0f0f0;
+    }
+
+    @media (height > 750px) {
+        #editor {
+            margin-top: 10px;
+            height: calc(100% - 10px);
+        }
+    }
+}
+
+@media (height > 750px) {
+    .ql-editor {
+        padding: 10px 10px;
+    }
+}
+
+#tools {
+    position: fixed;
+    bottom: 0;
+    width: 100vw;
+    background: #fff;
+}
+
+#toolbars {
+    font-size: inherit;
+    line-height: 1;
+    padding: 5px 15px;
+    background-color: #d0d0d0;
+    border-bottom: 1px solid #c0c0c0;
+    box-shadow: 0 0 5px #222;
+    clip-path: inset(-20px 0 0 0);
+}
+
+#toolbar {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+#quill-toolbar {
+    margin: 0;
+    padding: 0;
+}
+
+#toolbar button {
+    font-size: inherit;
+    border: none;
+    background: none;
+    color: #222;
+    cursor: pointer;
+}
+
+#toolbar button:hover,
+#toolbar button.ql-active {
+    color: #06c;
+}
+
+#toolbar button:not(:first-of-type) {
+    margin-left: 0.5em;
+}
+
+@media (width < 640px) {
+    button.ql-strike {
+        display: none;
+    }
+}
+
+@media (width < 475px) {
+    #toolbar button:not(:first-of-type) {
+        margin-left: 0.25em;
+    }
+}
+
+@media (width < 450px) {
+    button.ql-indent {
+        display: none;
+    }
+}
+
+#keyboard {
+    padding: 0 15px;
+    font-size: inherit;
+}
+
+#keyboard > div {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin: 10px auto;
+    max-width: var(--max-width);
+}
+
+#keyboard button {
+    padding: 0.25em;
+    font-family: sans-serif;
+    font-size: inherit;
+    font-weight: normal;
+    background-color: #e9e9ed;
+    color: #000;
+    border: 1px solid #8f8f9d;
+    border-radius: 5px;
+    cursor: pointer;
+    box-shadow: 0 0 4px #bbb;
+}
+
+#keyboard button:hover {
+    background-color: #cfcfd6;
+}
+
+#suggestions-line {
+    margin: 10px auto 0 auto;
+    max-width: var(--max-width);
+    height: calc(12px + 1.1em);
+    text-align: center;
+}
+
+#suggestions {
+    margin: 0 auto;
+    max-width: var(--max-width);
+    font-size: 1em;
+    line-height: 1;
+    overflow: hidden;
+    display: inline-flex;
+    gap: 15px;
+}
+
+#suggestions button {
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: inherit;
+    padding: 0 0.4em;
+    font-size: inherit;
+    white-space: nowrap;
+
+    font-family: sans-serif;
+    /*font-size: inherit;*/
+    font-weight: normal;
+    background-color: #e9e9ed;
+    color: #000;
+    border: 1px solid #8f8f9d;
+    border-radius: 5px;
+    cursor: pointer;
+    box-shadow: 0 0 4px #bbb;
+}
+
+#suggestions button:hover {
+    /*background-color: #dfdfe6;*/
+    background-color: #cfcfd6;
+}
+
+@media (width <= 1200px) {
+    #suggestions {
+        padding-left: 10px;
+    }
+}

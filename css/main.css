@@ -11,6 +11,10 @@
     display: none;
 }
 
+.capitalize {
+    text-transform: capitalize;
+}
+
 html {
     background: #fff;
     color: #000;

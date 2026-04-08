@@ -13,6 +13,7 @@
         <link href="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.snow.css" rel="stylesheet">
         <link href="css/main.css" rel="stylesheet">
         <link href="css/editor-scrollbar.css" rel="stylesheet">
+        <link id="selected-language-stylesheet" rel="stylesheet">
 
         <script src="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.js"></script>
     </head>
@@ -33,12 +34,12 @@
                         <button class="ql-indent" value="-1"><i class="fas fa-outdent"></i></button>
                         <button class="ql-list" value="bullet"><i class="fas fa-list"></i></button>
                         <button class="ql-list" value="ordered"><i class="fas fa-list-ol"></i></button>
-                        <button class="ql-strike"><i class="fas fa-strikethrough"></i></button>
+                        <!-- <button class="ql-strike"><i class="fas fa-strikethrough"></i></button> -->
                     </div>
                     <div id="custom-toolbar">
-                        <!-- <button class="delete-text"><i class="fa fa-eraser"></i> Erase All</button> -->
-                        <button class="cut-text"><i class="fas fa-cut"></i> Cut All</button>
-                        <button class="copy-text"><i class="far fa-copy"></i> Copy All</button>
+                        <!-- <button class="delete-text"><i class="fa fa-eraser"></i> <span class="translate" data-translate="erase all">Erase All</span></button> -->
+                        <button class="cut-text"><i class="fas fa-cut"></i> <span class="translate capitalize" data-translate="cut all">Cut All</span></button>
+                        <button class="copy-text"><i class="far fa-copy"></i> <span class="translate capitalize" data-translate="copy all">Copy All</span></button>
                     </div>
                 </div>
             </div>

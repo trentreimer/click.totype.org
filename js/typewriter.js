@@ -1,6 +1,6 @@
 import { settings } from './settings.js';
 import { languages } from './languages.js';
-import { initLanguage } from './set-language.js';
+import { initLanguage } from './language-settings.js';
 import { setKeyboard, applyShift, toggleShift } from './keyboard.js';
 
 await initLanguage();

@@ -1,6 +1,6 @@
 import { settings, effectiveBehavior, setBehaviorOverride } from './settings.js';
 import { languages } from './languages.js';
-import { initLanguage, setLanguage, applyLanguageToDocument, suggestEngine, isPersonalWordsEnabled, setPersonalWordsEnabled } from './language-settings.js';
+import { initLanguage, setLanguage, applyLanguageToDocument, suggestEngine, isUserWordsEnabled, setUserWordsEnabled } from './language-settings.js';
 import { setKeyboard, applyShift, toggleShift } from './keyboard.js';
 import { compositionEnabled, compositionBuffer, compositionAppend, compositionBackspace, compositionPrimary, compositionReset, compositionRender, compositionIdle, compositionVoiceLast } from './composition.js';
 import { voiceLastKana } from './kana.js';
@@ -89,7 +89,7 @@ function updateBehaviorToggles() {
     document.querySelector('.behavior-option input[data-behavior="autoUppercase"]')?.closest('.behavior-option').classList.toggle('hidden', caseless);
 
     const composing = !!(languages[settings.language] && languages[settings.language].composing);
-    document.querySelector('.behavior-option:has(#personal-words-toggle)')?.classList.toggle('hidden', composing);
+    document.querySelector('.behavior-option:has(#user-words-toggle)')?.classList.toggle('hidden', composing);
 }
 
 document.querySelectorAll('#settings input[data-behavior]').forEach(input => {
@@ -99,12 +99,12 @@ document.querySelectorAll('#settings input[data-behavior]').forEach(input => {
     });
 });
 
-const personalWordsToggle = document.querySelector('#personal-words-toggle');
+const userWordsToggle = document.querySelector('#user-words-toggle');
 
-personalWordsToggle.checked = isPersonalWordsEnabled();
+userWordsToggle.checked = isUserWordsEnabled();
 
-personalWordsToggle.addEventListener('change', function() {
-    setPersonalWordsEnabled(personalWordsToggle.checked);
+userWordsToggle.addEventListener('change', function() {
+    setUserWordsEnabled(userWordsToggle.checked);
 });
 
 updateBehaviorToggles();

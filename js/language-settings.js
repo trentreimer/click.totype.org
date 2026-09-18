@@ -2,61 +2,41 @@ import { languages } from './languages.js';
 import { settings } from './settings.js';
 import { setKeyboard, applyShift } from './keyboard.js';
 import { loadComposition, compositionIdle } from './composition.js';
-import { SuggestEngine } from 'https://cdn.jsdelivr.net/gh/trentreimer/suggest-engine@v0.1.0/dist/suggest-engine.esm.js';
+import { SuggestEngine } from 'https://cdn.jsdelivr.net/gh/trentreimer/suggest-engine@v0.2.0/dist/suggest-engine.esm.js';
 
-const personalStoragePrefix = 'ctt';
-const personalWordsEnabledKey = `${personalStoragePrefix}:personal-words-enabled`;
+const userWordsStoragePrefix = 'ctt';
+const userWordsEnabledKey = `${userWordsStoragePrefix}:user-words-enabled`;
 
-function personalWordsEnabled() {
-    return localStorage.getItem(personalWordsEnabledKey) !== 'off';
+function userWordsEnabled() {
+    return localStorage.getItem(userWordsEnabledKey) !== 'off';
 }
 
-export function isPersonalWordsEnabled() {
-    return suggestEngine.userWords !== null;
+export function isUserWordsEnabled() {
+    return suggestEngine.userWordsEnabled;
 }
 
-export function setPersonalWordsEnabled(enabled) {
-    localStorage.setItem(personalWordsEnabledKey, enabled ? 'on' : 'off');
+export function setUserWordsEnabled(enabled) {
+    localStorage.setItem(userWordsEnabledKey, enabled ? 'on' : 'off');
 
     if (enabled) {
         suggestEngine.enableUserWords();
     } else {
         suggestEngine.disableUserWords();
-        localStorage.removeItem(`${personalStoragePrefix}:personal-words`);
+        localStorage.removeItem(`${userWordsStoragePrefix}:user-words`);
+        localStorage.removeItem(`${userWordsStoragePrefix}:personal-words`);
         localStorage.removeItem('personal-words');
     }
 }
 
 export const suggestEngine = new SuggestEngine({
     maxSuggestions: 5,
-    ...(personalWordsEnabled() ? { userWords: { storagePrefix: personalStoragePrefix } } : {}),
+    ...(userWordsEnabled() ? { userWords: { storagePrefix: userWordsStoragePrefix } } : {}),
 });
 
-if (!suggestEngine.userWords) {
-    localStorage.removeItem(`${personalStoragePrefix}:personal-words`);
+if (!suggestEngine.userWordsEnabled) {
+    localStorage.removeItem(`${userWordsStoragePrefix}:user-words`);
+    localStorage.removeItem(`${userWordsStoragePrefix}:personal-words`);
     localStorage.removeItem('personal-words');
-}
-
-function migrateLegacyPersonalWords() {
-    if (!suggestEngine.userWords) return;
-
-    try {
-        const legacy = localStorage.getItem('personal-words');
-
-        if (!legacy) return;
-
-        if (!localStorage.getItem(`${personalStoragePrefix}:personal-words`)) {
-            const data = JSON.parse(legacy);
-
-            if (data && typeof data === 'object' && !Array.isArray(data)) {
-                localStorage.setItem(`${personalStoragePrefix}:personal-words`, JSON.stringify({ version: 1, languages: data }));
-            }
-        }
-
-        localStorage.removeItem('personal-words');
-    } catch (err) {
-        console.error(err);
-    }
 }
 
 export function applyLanguageToDocument() {
@@ -82,8 +62,6 @@ export async function setLanguage(lang) {
     } else {
         settings.language = Object.keys(languages)[0];
     }
-
-    migrateLegacyPersonalWords();
 
     console.log(`language = ${settings.language}`);
 

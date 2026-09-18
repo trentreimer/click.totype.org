@@ -11,7 +11,7 @@ export function setKeyboard(keyboard = '1') {
 
         for (const row of buttons) {
             const div = document.createElement('div');
-            const buttonWidth = Math.floor(100 / row.length);
+            const buttonWidth = 100 / row.length;
 
             for (const b of row) {
                 const button = document.createElement('button');
@@ -21,18 +21,29 @@ export function setKeyboard(keyboard = '1') {
                     button.setAttribute('data-text', b);
                     button.setAttribute('data-key', b);
 
-                    if (b.match(/[a-z]/)) {
+                    if (b.match(/\p{Ll}/u)) {
                         button.setAttribute('data-shift-text', b.toUpperCase());
                         button.setAttribute('data-shift-key', b.toUpperCase());
                     }
-                } else if (typeof b.text === 'string' && typeof b.key === 'string') {
+                } else if (typeof b.text === 'string' && (typeof b.key === 'string' || Array.isArray(b.group))) {
                     button.textContent = b.text;
                     button.setAttribute('data-text', b.text);
-                    button.setAttribute('data-key', b.key);
 
-                    if (typeof b.shiftText === 'string' && typeof b.shiftKey === 'string') {
-                        button.setAttribute('data-shift-text', b.shiftText);
-                        button.setAttribute('data-shift-key', b.shiftKey);
+                    if (typeof b.key === 'string') {
+                        button.setAttribute('data-key', b.key);
+
+                        if (typeof b.shiftText === 'string' && typeof b.shiftKey === 'string') {
+                            button.setAttribute('data-shift-text', b.shiftText);
+                            button.setAttribute('data-shift-key', b.shiftKey);
+                        }
+                    }
+
+                    if (Array.isArray(b.group)) {
+                        button.setAttribute('data-group', JSON.stringify(b.group));
+                    }
+
+                    if (b.t9) {
+                        button.setAttribute('data-t9', '');
                     }
                 }
 

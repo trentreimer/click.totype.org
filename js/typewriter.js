@@ -1,7 +1,12 @@
-import { settings } from './settings.js';
+import { settings, effectiveBehavior, setBehaviorOverride } from './settings.js';
 import { languages } from './languages.js';
-import { initLanguage } from './language-settings.js';
+import { initLanguage, setLanguage, applyLanguageToDocument, suggestEngine, isPersonalWordsEnabled, setPersonalWordsEnabled } from './language-settings.js';
 import { setKeyboard, applyShift, toggleShift } from './keyboard.js';
+import { compositionEnabled, compositionBuffer, compositionAppend, compositionBackspace, compositionPrimary, compositionReset, compositionRender, compositionIdle, compositionVoiceLast } from './composition.js';
+import { voiceLastKana } from './kana.js';
+import { initTooltips } from './tooltips.js';
+
+initTooltips();
 
 await initLanguage();
 
@@ -12,9 +17,27 @@ const quill = new Quill('#editor', {
     }
 });
 
+applyLanguageToDocument();
+
 quill.focus();
 
-const maxSuggestions = 5;
+const graphemeSegmenter = 'Segmenter' in Intl ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
+
+function previousGraphemeLength(textBefore) {
+    if (!textBefore) return 1;
+
+    if (graphemeSegmenter) {
+        const segments = [...graphemeSegmenter.segment(textBefore)];
+        return segments[segments.length - 1].segment.length;
+    }
+
+    const match = textBefore.match(/\P{M}\p{M}*$/su);
+    return match ? match[0].length : 1;
+}
+
+function wordBeforeCursor(index) {
+    return suggestEngine.wordBefore(quill.getText(0, index), index);
+}
 
 function copyAllText() {
     const range = document.createRange();
@@ -43,8 +66,10 @@ document.querySelectorAll('.cut-text').forEach(e => {
         copyAllText();
         quill.setText('');
         quill.focus();
-        setKeyboard(1);
-        applyShift();
+        setKeyboard('1');
+        if (effectiveBehavior('autoUppercase') && !languages[settings.language].caseless) applyShift();
+        compositionReset();
+        compositionIdle();
     });
 });
 
@@ -53,6 +78,62 @@ document.querySelectorAll('.delete-text').forEach(e => {
         quill.setText('');
         quill.focus();
     });
+});
+
+function updateBehaviorToggles() {
+    document.querySelectorAll('#settings input[data-behavior]').forEach(input => {
+        input.checked = effectiveBehavior(input.getAttribute('data-behavior'));
+    });
+
+    const caseless = !!(languages[settings.language] && languages[settings.language].caseless);
+    document.querySelector('.behavior-option input[data-behavior="autoUppercase"]')?.closest('.behavior-option').classList.toggle('hidden', caseless);
+
+    const composing = !!(languages[settings.language] && languages[settings.language].composing);
+    document.querySelector('.behavior-option:has(#personal-words-toggle)')?.classList.toggle('hidden', composing);
+}
+
+document.querySelectorAll('#settings input[data-behavior]').forEach(input => {
+    input.addEventListener('change', function() {
+        setBehaviorOverride(input.getAttribute('data-behavior'), input.checked);
+        updateBehaviorToggles();
+    });
+});
+
+const personalWordsToggle = document.querySelector('#personal-words-toggle');
+
+personalWordsToggle.checked = isPersonalWordsEnabled();
+
+personalWordsToggle.addEventListener('change', function() {
+    setPersonalWordsEnabled(personalWordsToggle.checked);
+});
+
+updateBehaviorToggles();
+
+document.querySelector('.settings-open').addEventListener('click', function() {
+    document.querySelector('#settings').showModal();
+});
+
+document.querySelector('.settings-close').addEventListener('click', function() {
+    document.querySelector('#settings').close();
+});
+
+const languageSelect = document.querySelector('#language-select');
+
+for (const [code, meta] of Object.entries(languages)) {
+    const option = document.createElement('option');
+    option.value = code;
+    option.textContent = meta.name;
+    languageSelect.appendChild(option);
+}
+
+languageSelect.value = settings.language;
+
+languageSelect.addEventListener('change', async function() {
+    await setLanguage(languageSelect.value);
+    localStorage.setItem('language', settings.language);
+    languageSelect.value = settings.language;
+    updateBehaviorToggles();
+    sizeDisplay();
 });
 
 function getSelection() {
@@ -75,12 +156,63 @@ function getSelection() {
 // Track when spaces have been added automatically
 let autoSpace = false;
 
+function closeKeyStrip() {
+    document.querySelector('#key-strip')?.remove();
+}
+
+function openKeyStrip(button) {
+    closeKeyStrip();
+
+    const strip = document.createElement('div');
+    strip.id = 'key-strip';
+    const replaceChar = button.getAttribute('data-key');
+
+    for (const char of JSON.parse(button.getAttribute('data-group'))) {
+        const option = document.createElement('button');
+
+        option.textContent = char;
+        option.setAttribute('data-text', char);
+        option.setAttribute('data-key', char);
+
+        if (replaceChar !== null) {
+            option.setAttribute('data-replace', replaceChar);
+        }
+
+        strip.appendChild(option);
+    }
+
+    const cancel = document.createElement('button');
+
+    cancel.textContent = '✕';
+    cancel.setAttribute('data-strip-cancel', '');
+    cancel.setAttribute('aria-label', 'close');
+    strip.appendChild(cancel);
+
+    document.querySelector('#keyboard').appendChild(strip);
+}
+
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('#key-strip') && !event.target.closest('button[data-group]')) {
+        closeKeyStrip();
+    }
+});
+
 document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
     entryElm.addEventListener('click', function(event) {
         event.preventDefault();
         const button = event.target.closest('button');
 
         if (button) {
+            if (button.hasAttribute('data-strip-cancel')) {
+                closeKeyStrip();
+                return;
+            }
+
+            if (button.hasAttribute('data-group') && button.getAttribute('data-key') === null) {
+                openKeyStrip(button);
+                return;
+            }
+
             const selection = getSelection();
 
             if (selection === null) return;
@@ -88,6 +220,19 @@ document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
             let shift = document.querySelector('#keyboard').classList.contains('shift');
             const key = shift && button.getAttribute('data-shift-key') !== null ? button.getAttribute('data-shift-key') : button.getAttribute('data-key');
             //console.log(key);
+
+            const composing = compositionEnabled();
+            const replaceChar = button.getAttribute('data-replace');
+
+            if (replaceChar !== null) {
+                if (composing && replaceChar === compositionBuffer().slice(-1)) {
+                    compositionBackspace();
+                } else if (selection.length === 0 && selection.index > 0 && quill.getText(selection.index - 1, 1) === replaceChar) {
+                    quill.deleteText(selection.index - 1, 1);
+                    quill.setSelection(selection.index - 1, 0);
+                    selection.index -= 1;
+                }
+            }
 
             quill.setSelection(selection);
             if (selection.length) quill.deleteText(selection.index, selection.length);
@@ -97,111 +242,140 @@ document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
                 toggleShift();
             } else if (entryElm.id === 'keyboard' && key === 'Enter') {
                 autoSpace = false;
-                if (selection.length) quill.deleteText(selection.index, selection.length);
-                quill.insertText(selection.index, "\n");
+                if (composing && compositionBuffer()) {
+                    quill.insertText(selection.index, compositionBuffer());
+                    compositionReset();
+                } else {
+                    if (!composing) suggestEngine.recordWord(wordBeforeCursor(selection.index));
+                    quill.insertText(selection.index, "\n");
+                }
                 //applyShift();
                 shift = false;
             } else if (entryElm.id === 'keyboard' && key === 'Backspace') {
                 autoSpace = false;
 
                 if (selection.length) { // This was already taken care of
+                } else if (composing && compositionBackspace()) {
+                    // Removed the last character of the composition buffer
                 } else if (selection.index > 0) {
-                    quill.deleteText(selection.index - 1, 1);
-                    quill.setSelection(selection.index - 1, 0);
+                    const deleteLength = previousGraphemeLength(quill.getText(0, selection.index));
+                    quill.deleteText(selection.index - deleteLength, deleteLength);
+                    quill.setSelection(selection.index - deleteLength, 0);
 
-                    if (selection.index < 2 && settings.activeKeyboard == '1') {
+                    if (selection.index < 2 && settings.activeKeyboard == '1' && effectiveBehavior('autoUppercase') && !languages[settings.language].caseless) {
                         applyShift();
                         shift = false;
                     }
                 } else {
                     return;
                 }
-            } else if (entryElm.id === 'keyboard' && key === 'Keyboard 1') {
+            } else if (entryElm.id === 'keyboard' && (key === '゛' || key === '゜')) {
                 autoSpace = false;
-                setKeyboard('1');
-                return;
-            } else if (entryElm.id === 'keyboard' && key === 'Keyboard 2') {
+
+                if (!(composing && compositionVoiceLast(key))) {
+                    voiceLastKana(quill, key);
+                }
+            } else if (entryElm.id === 'keyboard' && key.startsWith('Keyboard ')) {
                 autoSpace = false;
-                setKeyboard('2');
-                return;
+                if (composing && compositionBuffer()) {
+                    quill.insertText(selection.index, compositionBuffer());
+                    compositionReset();
+                }
+                setKeyboard(key.substring('Keyboard '.length));
             } else {
                 if (selection.length) quill.deleteText(selection.index, selection.length);
 
-                quill.insertText(selection.index, key);
+                if (!composing && !/\p{L}$/u.test(key)) {
+                    suggestEngine.recordWord(wordBeforeCursor(selection.index));
+                }
 
-                // Auto-spacing
-                if (['.', ',', '?', '!', ':'].includes(key)) {
-                    let spaceRemoved = false;
-                    const prevChars = quill.getText(selection.index - 2, 2).split('');
+                if (composing && entryElm.id === 'suggestions') {
+                    quill.insertText(selection.index, key);
+                    compositionReset();
+                    autoSpace = false;
+                } else if (composing && entryElm.id === 'keyboard' && key === ' ' && compositionBuffer()) {
+                    quill.insertText(selection.index, compositionPrimary());
+                    compositionReset();
+                    autoSpace = false;
+                } else if (composing && entryElm.id === 'keyboard' && button.hasAttribute('data-t9') && /^[2-9]$/.test(key)) {
+                    compositionAppend(key);
+                    autoSpace = false;
+                } else if (composing && entryElm.id === 'keyboard' && (/^[a-z]$/.test(key) || /^[\p{Script=Hiragana}\p{Script=Katakana}\u30FC]$/u.test(key))) {
+                    compositionAppend(key);
+                    autoSpace = false;
+                } else {
+                    const punctuation = settings.punctuation;
+                    const spaceAfterList = punctuation && Array.isArray(punctuation.spaceAfter) ? punctuation.spaceAfter : ['.', ',', '?', '!', ':'];
+                    const spaceBeforeList = punctuation && Array.isArray(punctuation.spaceBefore) ? punctuation.spaceBefore : [];
+                    const sentenceTerminators = punctuation && Array.isArray(punctuation.sentenceTerminators) ? punctuation.sentenceTerminators : ['.', '?', '!'];
+                    const spaceBeforeChar = punctuation && typeof punctuation.spaceBeforeChar === 'string' ? punctuation.spaceBeforeChar : '\u202F';
+                    const autoSpaceEnabled = effectiveBehavior('autoSpace');
+                    const autoUppercaseEnabled = effectiveBehavior('autoUppercase');
 
-                    if (autoSpace && prevChars.length && prevChars[prevChars.length - 1] == ' ') {
-                        quill.deleteText(selection.index - 1, 1);
-                        spaceRemoved = true;
+                    let insertIndex = selection.index;
+
+                    if (autoSpaceEnabled && spaceBeforeList.includes(key) && insertIndex > 0) {
+                        const prevChar = quill.getText(insertIndex - 1, 1);
+
+                        if (prevChar.match(/\p{L}/u)) {
+                            quill.insertText(insertIndex, spaceBeforeChar);
+                            insertIndex += 1;
+                        }
                     }
 
-                    if (prevChars.length && prevChars[0].match(/[a-zA-Z]/)) {
-                        const point = spaceRemoved ? selection.index : selection.index + 1;
-                        quill.insertText(point, ' ');
-                        autoSpace = true;
+                    quill.insertText(insertIndex, key);
 
-                        if (['.', '?', '!'].includes(key)) {
-                            applyShift();
-                            shift = false;
+                    // Auto-spacing
+                    if (autoSpaceEnabled && spaceAfterList.includes(key)) {
+                        let spaceRemoved = false;
+                        const prevChars = quill.getText(insertIndex - 2, 2).split('');
+
+                        if (autoSpace && prevChars.length && (prevChars[prevChars.length - 1] == ' ' || prevChars[prevChars.length - 1] == spaceBeforeChar)) {
+                            quill.deleteText(insertIndex - 1, 1);
+                            spaceRemoved = true;
                         }
+
+                        if (prevChars.length && prevChars[0].match(/\p{L}/u)) {
+                            const point = spaceRemoved ? insertIndex : insertIndex + 1;
+                            quill.insertText(point, ' ');
+                            autoSpace = true;
+
+                            if (autoUppercaseEnabled && sentenceTerminators.includes(key)) {
+                                applyShift();
+                                shift = false;
+                            }
+                        } else {
+                            autoSpace = false;
+                        }
+                    } else if (entryElm.id === 'suggestions') {
+                        quill.insertText(selection.index + key.length, ' ');
+                        autoSpace = true;
+                        suggestEngine.recordWord(wordBeforeCursor(selection.index + key.length));
                     } else {
                         autoSpace = false;
                     }
-                } else if (entryElm.id === 'suggestions') {
-                    quill.insertText(selection.index + key.length, ' ');
-                    autoSpace = true;
-                } else {
-                    autoSpace = false;
                 }
             }
 
             document.querySelectorAll('#suggestions button').forEach(e => e.remove());
 
-            if (entryElm.id === 'keyboard' && key.length === 1 && key.match(/[a-zA-Z]/)) {
+            if (composing) {
+                compositionRender();
+            } else if (entryElm.id === 'keyboard' && key.length === 1 && key.match(/\p{L}/u)) {
                 // Autocomplete suggestions
-                let wordStartPos = 0;
-
                 const selection = getSelection();
-                const str = quill.getText(0, selection.index);
+                const currentWord = wordBeforeCursor(selection.index);
 
-                if (selection.index > 1) {
-                    for (let i = selection.index - 1; i > 0; i --) {
-                        if (wordStartPos === 0 && /[^a-zA-Z]/.test(str.charAt(i))) {
-                            wordStartPos = i + 1;
-                            break;
-                        }
-                    }
-                }
+                if (currentWord.length > 0) {
+                    for (const suggestion of suggestEngine.suggest(currentWord)) {
+                        const button = document.createElement('button');
 
-                if (wordStartPos < selection.index) {
-                    const currentWord = str.substring(wordStartPos, selection.index);
-                    const firstLetter = currentWord.charAt(0).toUpperCase();
+                        button.setAttribute('data-key', suggestion.insertSuffix);
+                        // The label mirrors exactly what clicking inserts: the
+                        // prefix as the user typed it, then the list's casing.
+                        button.textContent = currentWord + suggestion.insertSuffix;
 
-                    if (settings.autocompleteLibrary[firstLetter] && Array.isArray(settings.autocompleteLibrary[firstLetter])) {
-                        const suggestions = [];
-
-                        for (const suggestion of settings.autocompleteLibrary[firstLetter]) {
-                            if (suggestion.length > currentWord.length && suggestion.substring(0, currentWord.length).toLowerCase() == currentWord.toLowerCase()) {
-                                suggestions.push(currentWord + suggestion.substring(currentWord.length));
-                            }
-
-                            if (suggestions.length == maxSuggestions) break;
-                        }
-
-                        suggestions.sort();
-
-                        for (const suggestion of suggestions) {
-                            const button = document.createElement('button');
-
-                            button.setAttribute('data-key', suggestion.substring(currentWord.length));
-                            button.textContent = suggestion;
-
-                            document.getElementById('suggestions').appendChild(button);
-                        }
+                        document.getElementById('suggestions').appendChild(button);
                     }
                 }
             }
@@ -210,6 +384,12 @@ document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
 
             if (shift && !(entryElm.id === 'keyboard' && key === 'Shift')) {
                 toggleShift();
+            }
+
+            if (button.hasAttribute('data-group')) {
+                openKeyStrip(button);
+            } else {
+                closeKeyStrip();
             }
         }
     });
@@ -240,26 +420,26 @@ function sizeDisplay() {
     document.querySelector('#toolbars').style.fontSize = `${toolbarFontSize}px`;
 
     const toolButtonsWrap = function() {
-        const buttonTops = [];
-
         document.querySelectorAll('#toolbars button.ql-strike').forEach(e => e.classList.remove('hidden'));
 
-        document.querySelectorAll('#toolbars button').forEach(function(e) {
-            if (getComputedStyle(e).getPropertyValue('display') != 'none') {
-                buttonTops.push(e.getBoundingClientRect().top);
-            }
-        });
+        const containers = document.querySelectorAll('#quill-toolbar, #custom-toolbar');
+        const tolerance = parseFloat(getComputedStyle(document.querySelector('#toolbars')).fontSize) / 2;
 
-        let wrapping = false;
+        for (const container of containers) {
+            const tops = [];
 
-        for (let i = 1; i < buttonTops.length; i ++) {
-            if (buttonTops[i] > buttonTops[i - 1]) {
-                wrapping = true;
-                break;
+            container.querySelectorAll('button').forEach(function(e) {
+                if (getComputedStyle(e).getPropertyValue('display') != 'none') {
+                    tops.push(e.getBoundingClientRect().top);
+                }
+            });
+
+            if (tops.length > 1 && tops.some(t => t - tops[0] > tolerance)) {
+                return true;
             }
         }
 
-        return wrapping;
+        return false;
     }
 
     while (toolbarFontSize > remPx && toolButtonsWrap()) {
@@ -268,7 +448,7 @@ function sizeDisplay() {
     }
 
     // Ensure the keyboard doesn't take up too much of the available screen height
-    while (fontSize > remPx && wh - getToolsHeight() < (fontSize * 1.25 * 5 + 20)) {
+    while (fontSize > remPx && wh - getToolsHeight() < (fontSize * 1.25 * 4 + 20)) {
         fontSize --;
         document.body.style.fontSize = `${fontSize}px`;
     }

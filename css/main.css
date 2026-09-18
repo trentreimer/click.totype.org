@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap');
+
 *, *::before, *::after {
     box-sizing: inherit;
 }
@@ -21,7 +23,7 @@ html {
 }
 
 body {
-    font-family: sans-serif;
+    font-family: 'Noto Sans', sans-serif;
     margin: 0;
     padding: 0;
     width: 100vw;
@@ -93,7 +95,7 @@ body {
     background-color: #d0d0d0;
     border-bottom: 1px solid #c0c0c0;
     box-shadow: 0 0 5px #222;
-    clip-path: inset(-20px 0 0 0);
+    clip-path: inset(-5em 0 0 0);
 }
 
 #toolbar {
@@ -111,6 +113,7 @@ body {
 
 #toolbar button {
     font-size: inherit;
+    vertical-align: middle;
     border: none;
     background: none;
     color: #222;
@@ -123,7 +126,69 @@ body {
 }
 
 #toolbar button:not(:first-of-type) {
-    margin-left: 0.5em;
+    margin-inline-start: 0.5em;
+}
+
+#custom-toolbar button {
+    padding: 0.15em 0.25em;
+}
+
+#toolbar button[data-tooltip] {
+    position: relative;
+}
+
+#toolbar button[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 0.5em);
+    left: 50%;
+    translate: calc(-50% + var(--tooltip-shift, 0px)) 0;
+    padding: 0.25em 0.6em;
+    border-radius: 5px;
+    background: #222;
+    color: #fff;
+    font-size: 0.75em;
+    line-height: 1.2;
+    white-space: nowrap;
+    text-transform: capitalize;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.1s ease;
+    z-index: 10;
+}
+
+#toolbar button[data-tooltip]:hover::after,
+#toolbar button[data-tooltip]:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+}
+
+@supports (anchor-name: --tooltip) {
+    #toolbar button[data-tooltip] {
+        anchor-name: --toolbar-tooltip;
+    }
+
+    #toolbar button[data-tooltip]::after {
+        position: fixed;
+        left: auto;
+        translate: none;
+        bottom: auto;
+        position-anchor: --toolbar-tooltip;
+        position-area: block-start;
+        margin-block-end: 0.5em;
+        position-try-fallbacks: --toolbar-tooltip-shift-start, --toolbar-tooltip-shift-end;
+    }
+
+    @position-try --toolbar-tooltip-shift-start {
+        position-area: block-start span-x-start;
+        justify-self: end;
+    }
+
+    @position-try --toolbar-tooltip-shift-end {
+        position-area: block-start span-x-end;
+        justify-self: start;
+    }
 }
 
 @media (width < 640px) {
@@ -134,7 +199,7 @@ body {
 
 @media (width < 475px) {
     #toolbar button:not(:first-of-type) {
-        margin-left: 0.25em;
+        margin-inline-start: 0.25em;
     }
 }
 
@@ -145,6 +210,7 @@ body {
 }
 
 #keyboard {
+    position: relative;
     padding: 0 15px;
     font-size: inherit;
 }
@@ -172,6 +238,38 @@ body {
 
 #keyboard button:hover {
     background-color: #cfcfd6;
+}
+
+#keyboard > #key-strip {
+    position: absolute;
+    top: 10px;
+    left: 15px;
+    right: 15px;
+    margin: 0;
+    z-index: 5;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    max-width: var(--max-width);
+}
+
+#key-strip button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.25em;
+    font-family: sans-serif;
+    font-size: inherit;
+    font-weight: normal;
+    background-color: #dde3f0;
+    color: #000;
+    border: 1px solid #8f8f9d;
+    border-radius: 5px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px #999;
+}
+
+#key-strip button:hover {
+    background-color: #c8cfe4;
 }
 
 #suggestions-line {
@@ -217,8 +315,107 @@ body {
     background-color: #cfcfd6;
 }
 
+#suggestions:has(.composition-buffer) {
+    gap: 8px;
+}
+
 @media (width <= 1200px) {
     #suggestions {
-        padding-left: 10px;
+        padding-inline-start: 10px;
     }
+}
+
+#suggestions .composition-buffer {
+    padding: 0 0.4em;
+    font-family: inherit;
+    font-weight: normal;
+    background-color: #f6f6f8;
+    color: #666;
+    border: 1px solid #c5c5d0;
+    border-radius: 5px;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+#suggestions .composition-hint {
+    padding: 0 0.4em;
+    font-family: inherit;
+    font-weight: normal;
+    color: #888;
+    border: 1px dashed #b5b5c2;
+    border-radius: 5px;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+#settings {
+    border: none;
+    border-radius: 5px;
+    box-shadow: 0 0 10px #222;
+    padding: 1em 1.25em;
+    min-width: min(20em, 90vw);
+}
+
+#settings::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+#settings .settings-close {
+    position: absolute;
+    top: 0.5em;
+    inset-inline-end: 0.5em;
+    border: none;
+    background: none;
+    color: #222;
+    cursor: pointer;
+    font-size: inherit;
+    padding: 0.25em;
+}
+
+#settings .settings-close:hover {
+    color: #06c;
+}
+
+#settings h2 {
+    margin: 0 0 0.75em 0;
+    font-size: inherit;
+}
+
+#settings label[for] {
+    display: block;
+    margin-bottom: 0.25em;
+}
+
+#settings select {
+    font-size: inherit;
+    font-family: sans-serif;
+    padding: 0.25em;
+    margin: 0 0 1em 0;
+    min-width: 10em;
+}
+
+#settings fieldset {
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+#settings legend {
+    padding: 0;
+    margin-bottom: 0.5em;
+}
+
+#settings .behavior-option {
+    display: block;
+    margin: 0.5em 0;
+    cursor: pointer;
+}
+
+#settings .behavior-option input {
+    width: 1em;
+    height: 1em;
+    font-size: inherit;
+    margin: 0;
+    margin-inline-end: 0.5em;
+    vertical-align: middle;
 }

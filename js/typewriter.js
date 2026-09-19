@@ -4,6 +4,7 @@ import { initLanguage, setLanguage, applyLanguageToDocument, suggestEngine, isUs
 import { setKeyboard, applyShift, toggleShift } from './keyboard.js';
 import { compositionEnabled, compositionBuffer, compositionAppend, compositionBackspace, compositionPrimary, compositionReset, compositionRender, compositionIdle, compositionVoiceLast } from './composition.js';
 import { voiceLastKana } from './kana.js';
+import { textBefore } from './editor-text.js';
 import { initTooltips } from './tooltips.js';
 
 initTooltips();
@@ -23,20 +24,22 @@ quill.focus();
 
 const graphemeSegmenter = 'Segmenter' in Intl ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
 
-function previousGraphemeLength(textBefore) {
-    if (!textBefore) return 1;
+function previousGraphemeLength(text) {
+    if (!text) return 1;
 
     if (graphemeSegmenter) {
-        const segments = [...graphemeSegmenter.segment(textBefore)];
+        const segments = [...graphemeSegmenter.segment(text)];
         return segments[segments.length - 1].segment.length;
     }
 
-    const match = textBefore.match(/\P{M}\p{M}*$/su);
+    const match = text.match(/\P{M}\p{M}*$/su);
     return match ? match[0].length : 1;
 }
 
 function wordBeforeCursor(index) {
-    return suggestEngine.wordBefore(quill.getText(0, index), index);
+    const text = textBefore(quill, index);
+
+    return suggestEngine.wordBefore(text, text.length);
 }
 
 function copyAllText() {
@@ -258,7 +261,7 @@ document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
                 } else if (composing && compositionBackspace()) {
                     // Removed the last character of the composition buffer
                 } else if (selection.index > 0) {
-                    const deleteLength = previousGraphemeLength(quill.getText(0, selection.index));
+                    const deleteLength = previousGraphemeLength(textBefore(quill, selection.index));
                     quill.deleteText(selection.index - deleteLength, deleteLength);
                     quill.setSelection(selection.index - deleteLength, 0);
 
@@ -362,21 +365,17 @@ document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
             if (composing) {
                 compositionRender();
             } else if (entryElm.id === 'keyboard' && key.length === 1 && key.match(/\p{L}/u)) {
-                // Autocomplete suggestions
+                // Context-aware autocomplete suggestions
                 const selection = getSelection();
-                const currentWord = wordBeforeCursor(selection.index);
+                const text = textBefore(quill, selection.index);
 
-                if (currentWord.length > 0) {
-                    for (const suggestion of suggestEngine.suggest(currentWord)) {
-                        const button = document.createElement('button');
+                for (const suggestion of suggestEngine.suggestAt(text, text.length)) {
+                    const button = document.createElement('button');
 
-                        button.setAttribute('data-key', suggestion.insertSuffix);
-                        // The label mirrors exactly what clicking inserts: the
-                        // prefix as the user typed it, then the list's casing.
-                        button.textContent = currentWord + suggestion.insertSuffix;
+                    button.setAttribute('data-key', suggestion.insertSuffix);
+                    button.textContent = suggestion.text;
 
-                        document.getElementById('suggestions').appendChild(button);
-                    }
+                    document.getElementById('suggestions').appendChild(button);
                 }
             }
 

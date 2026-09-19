@@ -2,7 +2,7 @@ import { languages } from './languages.js';
 import { settings } from './settings.js';
 import { setKeyboard, applyShift } from './keyboard.js';
 import { loadComposition, compositionIdle } from './composition.js';
-import { SuggestEngine } from 'https://cdn.jsdelivr.net/gh/trentreimer/suggest-engine@v0.2.2/dist/suggest-engine.esm.js';
+import { SuggestEngine } from 'https://cdn.jsdelivr.net/gh/trentreimer/suggest-engine@v0.3.0/dist/suggest-engine.esm.js';
 
 const userWordsStoragePrefix = 'ctt';
 const userWordsEnabledKey = `${userWordsStoragePrefix}:user-words-enabled`;
@@ -121,6 +121,7 @@ export async function loadAutocompleteSource() {
 
     try {
         await suggestEngine.loadBundledWordList();
+        await suggestEngine.loadBundledNgrams();
     } catch (err) {
         console.error(err);
     }

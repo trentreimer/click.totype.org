@@ -1,3 +1,5 @@
+import { textBefore } from './editor-text.js';
+
 const voicedPairs = [
     ['かきくけこ', 'がぎぐげご'],
     ['さしすせそ', 'ざじずぜぞ'],
@@ -49,7 +51,7 @@ export function voiceLastKana(quill, mark) {
 
     if (!selection) return;
 
-    const before = quill.getText(0, selection.index);
+    const before = textBefore(quill, selection.index, 4);
     const chars = [...before];
     const last = chars.length ? chars[chars.length - 1] : '';
     const replacement = voiceKanaChar(last, mark);

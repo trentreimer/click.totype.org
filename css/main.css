@@ -93,6 +93,10 @@ body {
     font-size: max(var(--font-size), 10px);
     font-size: max(1rem, 10px);
     margin: 0 auto;
+    /* Quill turns #editor into .ql-container and hard-codes Helvetica/Arial
+       there, which has no glyphs for many scripts; use the language font each
+       language's stylesheet puts on <body> instead. */
+    font-family: inherit;
 }
 
 .ql-editor {

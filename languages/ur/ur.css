@@ -1,0 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
+
+body {
+    font-family: 'Noto Nastaliq Urdu', 'Noto Sans', sans-serif;
+}
+
+#keyboard button,
+#suggestions button {
+    font-family: 'Noto Nastaliq Urdu', 'Noto Sans', sans-serif;
+    line-height: 1.8;
+}
+
+.ql-editor {
+    font-family: inherit;
+}

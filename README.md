@@ -21,3 +21,18 @@ step, just a page refresh.
 
 **Before deploying**, flip the imports back so the CDN line is the active one
 (see AGENTS.md).
+
+## Languages
+
+`js/languages.js` is the registry; the settings dropdown is generated from it.
+Each language also needs a `languages/<code>/` folder with `keyboards.js`,
+`translations.js`, `punctuation.js`, and `<code>.css`. Word lists and context
+models come from suggest-engine and need no host assets.
+
+Currently exposed: `en fr es de pt ru ar hi bn zh ja id ko tr fa ur vi it pl
+uk nl el he tl sw ha`.
+
+New non-Latin keyboard layouts (`ko`, `el`, `he`, `fa`, `ur`) are best-effort
+and marked `TODO: native-speaker review`. `translations.js` files for the newer
+languages are empty on purpose: missing keys fall back to the English UI text
+until native translations are added.

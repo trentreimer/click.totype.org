@@ -5,6 +5,7 @@ import { setKeyboard, applyShift, toggleShift } from './keyboard.js';
 import { compositionEnabled, compositionBuffer, compositionAppend, compositionBackspace, compositionPrimary, compositionReset, compositionRender, compositionIdle, compositionVoiceLast } from './composition.js';
 import { voiceLastKana } from './kana.js';
 import { textBefore } from './editor-text.js';
+import { composeTrailingJamo, backspaceJamo } from './jamo.js';
 import { initTooltips } from './tooltips.js';
 
 initTooltips();
@@ -362,6 +363,8 @@ document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
                 if (selection.length) { // This was already taken care of
                 } else if (composing && compositionBackspace()) {
                     // Removed the last character of the composition buffer
+                } else if (languages[settings.language]?.jamo && backspaceJamo(quill)) {
+                    // Stepped back one Hangul composition state
                 } else if (selection.index > 0) {
                     const deleteLength = previousGraphemeLength(textBefore(quill, selection.index));
                     quill.deleteText(selection.index - deleteLength, deleteLength);
@@ -466,11 +469,15 @@ document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
                 }
             }
 
+            if (entryElm.id === 'keyboard' && languages[settings.language]?.jamo && key.length === 1 && key.match(/\p{L}/u)) {
+                composeTrailingJamo(quill);
+            }
+
             document.querySelectorAll('#suggestions button').forEach(e => e.remove());
 
             if (composing) {
                 compositionRender();
-            } else if (entryElm.id === 'keyboard' && key.length === 1 && key.match(/\p{L}/u)) {
+            } else if (entryElm.id === 'keyboard' && ((key.length === 1 && key.match(/\p{L}/u)) || (key === 'Backspace' && languages[settings.language]?.jamo))) {
                 // Context-aware autocomplete suggestions
                 const selection = getSelection();
                 const text = textBefore(quill, selection.index);

@@ -11,7 +11,7 @@ export const languages = {
     zh: { name: '中文', dir: 'ltr', caseless: true, composing: true },
     ja: { name: '日本語', dir: 'ltr', caseless: true, composing: true },
     id: { name: 'Bahasa Indonesia', dir: 'ltr', caseless: false },
-    ko: { name: '한국어', dir: 'ltr', caseless: true },
+    ko: { name: '한국어', dir: 'ltr', caseless: true, jamo: true },
     tr: { name: 'Türkçe', dir: 'ltr', caseless: false },
     fa: { name: 'فارسی', dir: 'rtl', caseless: true },
     ur: { name: 'اردو', dir: 'rtl', caseless: true },

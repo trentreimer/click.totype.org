@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap');
 
 *, *::before, *::after {
     box-sizing: inherit;
@@ -398,6 +398,8 @@ body {
     box-shadow: 0 0 10px #222;
     padding: 1em 1.25em;
     min-width: min(20em, 90vw);
+    max-height: 90vh;
+    overflow: auto;
 }
 
 #settings::backdrop {
@@ -432,7 +434,7 @@ body {
 
 #settings select {
     font-size: inherit;
-    font-family: sans-serif;
+    font-family: 'Noto Sans', 'Noto Sans KR', sans-serif;
     padding: 0.25em;
     margin: 0 0 1em 0;
     min-width: 10em;

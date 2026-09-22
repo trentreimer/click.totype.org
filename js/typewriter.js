@@ -132,23 +132,114 @@ document.querySelector('.settings-close').addEventListener('click', function() {
 });
 
 const languageSelect = document.querySelector('#language-select');
+const languageValue = document.querySelector('#language-select-value');
+const languageList = document.querySelector('.language-select-list');
+const languageOptions = new Map();
 
 for (const [code, meta] of Object.entries(languages)) {
-    const option = document.createElement('option');
-    option.value = code;
+    const option = document.createElement('li');
+    option.setAttribute('role', 'option');
+    option.setAttribute('aria-selected', 'false');
+    option.tabIndex = -1;
+    option.dataset.value = code;
     option.textContent = meta.name;
-    languageSelect.appendChild(option);
+    option.addEventListener('click', () => chooseLanguage(code));
+    languageList.appendChild(option);
+    languageOptions.set(code, option);
 }
 
-languageSelect.value = settings.language;
+function renderLanguage() {
+    const meta = languages[settings.language];
+    languageValue.textContent = meta ? meta.name : '';
 
-languageSelect.addEventListener('change', async function() {
-    await setLanguage(languageSelect.value);
+    for (const [code, option] of languageOptions) {
+        option.setAttribute('aria-selected', code === settings.language ? 'true' : 'false');
+    }
+}
+
+function languageListOpen() {
+    return !languageList.hidden;
+}
+
+function openLanguageList(where = 'selected') {
+    languageList.hidden = false;
+    languageSelect.setAttribute('aria-expanded', 'true');
+
+    const selected = languageOptions.get(settings.language);
+    const target = where === 'last' ? languageList.lastElementChild
+        : where === 'first' ? languageList.firstElementChild
+        : selected || languageList.firstElementChild;
+
+    target?.focus();
+    target?.scrollIntoView({ block: 'nearest' });
+}
+
+function closeLanguageList(refocus = true) {
+    if (languageList.hidden) return;
+
+    languageList.hidden = true;
+    languageSelect.setAttribute('aria-expanded', 'false');
+
+    if (refocus) languageSelect.focus();
+}
+
+async function chooseLanguage(code) {
+    await setLanguage(code);
     localStorage.setItem('language', settings.language);
-    languageSelect.value = settings.language;
+    renderLanguage();
     updateBehaviorToggles();
     sizeDisplay();
+    closeLanguageList();
+}
+
+languageSelect.addEventListener('click', function() {
+    if (languageListOpen()) closeLanguageList();
+    else openLanguageList();
 });
+
+languageSelect.addEventListener('keydown', function(event) {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        openLanguageList(event.key === 'ArrowDown' ? 'selected' : 'last');
+    }
+});
+
+languageList.addEventListener('keydown', function(event) {
+    const options = [...languageList.children];
+    const index = options.indexOf(document.activeElement);
+
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        const next = event.key === 'ArrowDown'
+            ? Math.min(index + 1, options.length - 1)
+            : Math.max(index - 1, 0);
+        options[next].focus();
+    } else if (event.key === 'Home') {
+        event.preventDefault();
+        options[0].focus();
+    } else if (event.key === 'End') {
+        event.preventDefault();
+        options[options.length - 1].focus();
+    } else if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        chooseLanguage(options[index].dataset.value);
+    } else if (event.key === 'Escape') {
+        event.preventDefault();
+        closeLanguageList();
+    } else if (event.key === 'Tab') {
+        closeLanguageList(false);
+    }
+});
+
+document.addEventListener('pointerdown', function(event) {
+    if (languageListOpen() && !languageList.contains(event.target) && !languageSelect.contains(event.target)) {
+        closeLanguageList(false);
+    }
+});
+
+document.querySelector('#settings').addEventListener('close', () => closeLanguageList(false));
+
+renderLanguage();
 
 function getSelection() {
     let selection = quill.getSelection();

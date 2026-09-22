@@ -400,6 +400,7 @@ body {
     min-width: min(20em, 90vw);
     max-height: 90vh;
     overflow: auto;
+    margin: 0.5em auto auto;
 }
 
 #settings::backdrop {
@@ -432,12 +433,60 @@ body {
     margin-bottom: 0.25em;
 }
 
-#settings select {
+.language-select {
+    margin: 0 0 1em 0;
+}
+
+.language-select-button {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5em;
+    width: 100%;
+    min-width: 10em;
+    padding: 0.25em 0.5em;
     font-size: inherit;
     font-family: 'Noto Sans', 'Noto Sans KR', sans-serif;
-    padding: 0.25em;
-    margin: 0 0 1em 0;
-    min-width: 10em;
+    color: inherit;
+    background: #fff;
+    border: 1px solid #767676;
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+.language-select-button::after {
+    content: '\25BE';
+}
+
+.language-select-list {
+    list-style: none;
+    margin: 0.25em 0 0;
+    padding: 0;
+    max-height: 40vh;
+    overflow-y: auto;
+    font-size: inherit;
+    font-family: 'Noto Sans', 'Noto Sans KR', sans-serif;
+    background: #fff;
+    border: 1px solid #767676;
+    border-radius: 2px;
+}
+
+.language-select-list[hidden] {
+    display: none;
+}
+
+.language-select-list li {
+    padding: 0.25em 0.5em;
+    cursor: pointer;
+}
+
+.language-select-list li:hover {
+    background: #eee;
+}
+
+.language-select-list li[aria-selected="true"] {
+    background: #06c;
+    color: #fff;
 }
 
 #settings fieldset {

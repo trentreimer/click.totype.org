@@ -64,8 +64,13 @@
         <dialog id="settings">
             <button class="settings-close" aria-label="Close"><i class="fas fa-xmark"></i></button>
             <h2 class="translate capitalize" data-translate="settings">Settings</h2>
-            <label class="translate capitalize" for="language-select" data-translate="language">Language</label>
-            <select id="language-select" size="6"></select>
+            <label class="translate capitalize" id="language-label" for="language-select" data-translate="language">Language</label>
+            <div class="language-select">
+                <button type="button" id="language-select" class="language-select-button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="language-label language-select-value">
+                    <span class="language-select-value" id="language-select-value"></span>
+                </button>
+                <ul class="language-select-list" role="listbox" aria-labelledby="language-label" tabindex="-1" hidden></ul>
+            </div>
             <fieldset>
                 <legend class="translate capitalize" data-translate="typing behaviour">Typing behaviour</legend>
                 <label class="behavior-option">

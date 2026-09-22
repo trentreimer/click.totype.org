@@ -72,7 +72,6 @@ body {
     padding: 0;
     width: 100vw;
     height: 100vh;
-    --font-size: 1rem;
 }
 
 #editor-area {
@@ -90,8 +89,7 @@ body {
     width: 100%;
     max-width: var(--max-width);
     height: 100%;
-    font-size: max(var(--font-size), 10px);
-    font-size: max(1rem, 10px);
+    font-size: 1rem;
     margin: 0 auto;
     /* Quill turns #editor into .ql-container and hard-codes Helvetica/Arial
        there, which has no glyphs for many scripts; use the language font each

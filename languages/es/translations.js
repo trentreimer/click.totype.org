@@ -8,4 +8,5 @@ export const translations = {
     'language': 'idioma',
     'typing behaviour': 'comportamiento de escritura',
     'include my words in autocompletion': 'incluir mis palabras en el autocompletado',
+    'loading': 'cargando',
 };

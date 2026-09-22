@@ -8,4 +8,5 @@ export const translations = {
     'language': 'ভাষা',
     'typing behaviour': 'টাইপিং আচরণ',
     'include my words in autocompletion': 'অটোকমপ্লিশনে আমার শব্দ অন্তর্ভুক্ত করুন',
+    'loading': 'লোড হচ্ছে',
 };

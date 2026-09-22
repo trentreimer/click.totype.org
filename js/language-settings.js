@@ -2,7 +2,9 @@ import { languages } from './languages.js';
 import { settings } from './settings.js';
 import { setKeyboard, applyShift } from './keyboard.js';
 import { loadComposition, compositionIdle } from './composition.js';
-import { SuggestEngine } from 'https://cdn.jsdelivr.net/gh/trentreimer/suggest-engine@v0.4.0/dist/suggest-engine.esm.js';
+import { SuggestEngine, voiceKanaChar } from 'https://cdn.jsdelivr.net/gh/trentreimer/suggest-engine@v0.7.0/dist/suggest-engine.esm.js';
+
+export { voiceKanaChar };
 
 const userWordsStoragePrefix = 'ctt';
 const userWordsEnabledKey = `${userWordsStoragePrefix}:user-words-enabled`;
@@ -67,9 +69,15 @@ export async function setLanguage(lang) {
 
     document.querySelector('link#selected-language-stylesheet')?.setAttribute('href', `languages/${settings.language}/${settings.language}.css`);
 
-    settings.keyboards = (await import(`../languages/${settings.language}/keyboards.js`)).default;
-    settings.translations = (await import(`../languages/${settings.language}/translations.js`)).translations;
-    settings.punctuation = (await import(`../languages/${settings.language}/punctuation.js`)).punctuation;
+    const [keyboards, translations, punctuation] = await Promise.all([
+        import(`../languages/${settings.language}/keyboards.js`),
+        import(`../languages/${settings.language}/translations.js`),
+        import(`../languages/${settings.language}/punctuation.js`),
+    ]);
+
+    settings.keyboards = keyboards.default;
+    settings.translations = translations.translations;
+    settings.punctuation = punctuation.punctuation;
 
     document.querySelectorAll('.translate[data-translate]').forEach(e => {
         const key = e.getAttribute('data-translate');
@@ -89,7 +97,16 @@ export async function setLanguage(lang) {
     setKeyboard('1');
     if (!languages[settings.language].caseless) applyShift();
 
-    await loadAutocompleteSource();
+    // Engine language first: the composition load below keys off it. The word
+    // list and context model only shape suggestion quality — the engine
+    // degrades to frequency-only suggestions until they land, so they load in
+    // the background without delaying the editor. Kept sequential inside the
+    // task: building the context index before the word list exists would
+    // cache a null index for the session.
+    suggestEngine.setLanguage(settings.language);
+
+    loadSuggestionData();
+
     await loadComposition();
     compositionIdle();
 }
@@ -116,13 +133,8 @@ export async function initLanguage() {
     return true;
 }
 
-export async function loadAutocompleteSource() {
-    suggestEngine.setLanguage(settings.language);
-
-    try {
-        await suggestEngine.loadBundledWordList();
-        await suggestEngine.loadBundledNgrams();
-    } catch (err) {
-        console.error(err);
-    }
+export function loadSuggestionData() {
+    return suggestEngine.loadWordList()
+        .then(() => suggestEngine.loadSuggestionContext())
+        .catch(err => console.error(err));
 }

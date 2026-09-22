@@ -8,4 +8,5 @@ export const translations = {
     'language': 'bahasa',
     'typing behaviour': 'perilaku mengetik',
     'include my words in autocompletion': 'sertakan kata saya dalam pelengkapan otomatis',
+    'loading': 'memuat',
 };

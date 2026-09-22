@@ -9,4 +9,5 @@ export const translations = {
     'typing behaviour': '入力動作',
     'composition hint': '漢字変換',
     'include my words in autocompletion': '自分の単語を自動補完に含める',
+    'loading': '読み込み中',
 };

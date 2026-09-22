@@ -9,18 +9,29 @@ import { initTooltips } from './tooltips.js';
 
 initTooltips();
 
-await initLanguage();
+let quill;
 
-const quill = new Quill('#editor', {
-    //theme: 'snow',
-    modules: {
-        toolbar: '#quill-toolbar',
-    }
-});
+try {
+    await initLanguage();
 
-applyLanguageToDocument();
+    quill = new Quill('#editor', {
+        //theme: 'snow',
+        modules: {
+            toolbar: '#quill-toolbar',
+        }
+    });
 
-quill.focus();
+    applyLanguageToDocument();
+
+    // Layout before revealing so the first painted frame is already sized.
+    sizeDisplay();
+    document.getElementById('loading')?.classList.add('hidden');
+
+    quill.focus();
+} catch (err) {
+    console.error(err);
+    document.getElementById('loading')?.classList.add('failed');
+}
 
 const graphemeSegmenter = 'Segmenter' in Intl ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
 
@@ -39,7 +50,7 @@ function previousGraphemeLength(text) {
 function wordBeforeCursor(index) {
     const text = textBefore(quill, index);
 
-    return suggestEngine.wordBefore(text, text.length);
+    return suggestEngine.wordAt(text, text.length);
 }
 
 function copyAllText() {
@@ -294,10 +305,14 @@ document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
 
                 if (composing && entryElm.id === 'suggestions') {
                     quill.insertText(selection.index, key);
+                    suggestEngine.recordWord(key);
                     compositionReset();
                     autoSpace = false;
                 } else if (composing && entryElm.id === 'keyboard' && key === ' ' && compositionBuffer()) {
-                    quill.insertText(selection.index, compositionPrimary());
+                    const primary = compositionPrimary();
+
+                    quill.insertText(selection.index, primary);
+                    suggestEngine.recordWord(primary);
                     compositionReset();
                     autoSpace = false;
                 } else if (composing && entryElm.id === 'keyboard' && button.hasAttribute('data-t9') && /^[2-9]$/.test(key)) {

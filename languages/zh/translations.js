@@ -9,4 +9,5 @@ export const translations = {
     'typing behaviour': '输入行为',
     'composition hint': '输入拼音',
     'include my words in autocompletion': '在自动补全中包含我的词',
+    'loading': '加载中',
 };

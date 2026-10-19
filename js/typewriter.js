@@ -303,6 +303,19 @@ document.addEventListener('click', function(event) {
     }
 });
 
+function renderSuggestions(suggestions) {
+    const strip = document.getElementById('suggestions');
+
+    for (const suggestion of suggestions) {
+        const button = document.createElement('button');
+
+        button.setAttribute('data-key', suggestion.insertSuffix);
+        button.textContent = suggestion.text;
+
+        strip.appendChild(button);
+    }
+}
+
 document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
     entryElm.addEventListener('click', function(event) {
         event.preventDefault();
@@ -342,6 +355,8 @@ document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
 
             quill.setSelection(selection);
             if (selection.length) quill.deleteText(selection.index, selection.length);
+
+            let nextWord = false;
 
             if (entryElm.id === 'keyboard' && key === 'Shift') {
                 autoSpace = false;
@@ -426,6 +441,11 @@ document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
 
                     let insertIndex = selection.index;
 
+                    if (!composing && key === ' ') {
+                        const before = textBefore(quill, insertIndex).replace(/\s+$/, '');
+                        nextWord = before.length > 0 && !sentenceTerminators.includes(before.slice(-1));
+                    }
+
                     if (autoSpaceEnabled && spaceBeforeList.includes(key) && insertIndex > 0) {
                         const prevChar = quill.getText(insertIndex - 1, 1);
 
@@ -462,9 +482,14 @@ document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
                     } else if (entryElm.id === 'suggestions') {
                         quill.insertText(selection.index + key.length, ' ');
                         autoSpace = true;
+                        nextWord = true;
                         suggestEngine.recordWord(wordBeforeCursor(selection.index + key.length));
                     } else {
                         autoSpace = false;
+                    }
+
+                    if (!composing && spaceAfterList.includes(key) && !sentenceTerminators.includes(key)) {
+                        nextWord = true;
                     }
                 }
             }
@@ -482,14 +507,13 @@ document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
                 const selection = getSelection();
                 const text = textBefore(quill, selection.index);
 
-                for (const suggestion of suggestEngine.suggestAt(text, text.length)) {
-                    const button = document.createElement('button');
+                renderSuggestions(suggestEngine.suggestAt(text, text.length));
+            } else if (nextWord) {
+                // Next-word suggestions after a completed word
+                const selection = getSelection();
+                const text = textBefore(quill, selection.index);
 
-                    button.setAttribute('data-key', suggestion.insertSuffix);
-                    button.textContent = suggestion.text;
-
-                    document.getElementById('suggestions').appendChild(button);
-                }
+                renderSuggestions(suggestEngine.nextWords(text));
             }
 
             quill.scrollSelectionIntoView();

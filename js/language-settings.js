@@ -2,7 +2,7 @@ import { languages } from './languages.js';
 import { settings } from './settings.js';
 import { setKeyboard, applyShift } from './keyboard.js';
 import { loadComposition, compositionIdle } from './composition.js';
-import { SuggestEngine, voiceKanaChar, composeJamo, backspaceHangul } from 'https://cdn.jsdelivr.net/gh/trentreimer/suggest-engine@v0.11.2/dist/suggest-engine.esm.js';
+import { SuggestEngine, voiceKanaChar, composeJamo, backspaceHangul } from 'https://cdn.jsdelivr.net/gh/trentreimer/suggest-engine@v0.11.4/dist/suggest-engine.esm.js';
 
 export { voiceKanaChar, composeJamo, backspaceHangul };
 

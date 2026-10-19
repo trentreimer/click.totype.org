@@ -54,6 +54,31 @@ function wordBeforeCursor(index) {
     return suggestEngine.wordAt(text, text.length);
 }
 
+function sentenceTerminators() {
+    const punctuation = settings.punctuation;
+
+    return punctuation && Array.isArray(punctuation.sentenceTerminators) ? punctuation.sentenceTerminators : ['.', '?', '!'];
+}
+
+function atSentenceStart(before) {
+    const trimmed = before.replace(/\s+$/, '');
+
+    return trimmed.length === 0 || sentenceTerminators().includes(trimmed.slice(-1));
+}
+
+// A completed word that starts a sentence may have received its capital from
+// auto-uppercase; tell the engine so it makes no casing claim for it.
+function recordCompletedWord(index) {
+    const word = wordBeforeCursor(index);
+
+    if (!word) return;
+
+    const before = textBefore(quill, index - word.length);
+    const autoCapitalized = atSentenceStart(before) && effectiveBehavior('autoUppercase') && !languages[settings.language]?.caseless;
+
+    suggestEngine.recordWord(word, { autoCapitalized });
+}
+
 function copyAllText() {
     const range = document.createRange();
     const selection = window.getSelection();
@@ -303,14 +328,41 @@ document.addEventListener('click', function(event) {
     }
 });
 
-function renderSuggestions(suggestions) {
+function capitalizeFirst(text) {
+    return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+// Suggestions shown while the caret sits at a sentence start are capitalized
+// the way the auto-uppercase behavior would type them — but only when the
+// typed prefix already carries a capital (or there is no prefix), so a
+// deliberately lowercase start is left alone.
+function capitalizeSuggestions(text) {
+    if (languages[settings.language]?.caseless) return false;
+
+    const prefix = suggestEngine.wordAt(text, text.length);
+    const before = text.slice(0, text.length - prefix.length);
+
+    if (!atSentenceStart(before)) return false;
+    if (prefix) return /^\p{Lu}/u.test(prefix);
+
+    return effectiveBehavior('autoUppercase');
+}
+
+function renderSuggestions(suggestions, capitalize = false) {
     const strip = document.getElementById('suggestions');
 
     for (const suggestion of suggestions) {
+        const display = capitalize && suggestion.text === suggestion.text.toLowerCase()
+            ? capitalizeFirst(suggestion.text)
+            : suggestion.text;
+        const insertSuffix = capitalize && suggestion.insertSuffix === suggestion.text
+            ? capitalizeFirst(suggestion.insertSuffix)
+            : suggestion.insertSuffix;
         const button = document.createElement('button');
 
-        button.setAttribute('data-key', suggestion.insertSuffix);
-        button.textContent = suggestion.text;
+        button.setAttribute('data-key', insertSuffix);
+        button.setAttribute('data-text', display);
+        button.textContent = display;
 
         strip.appendChild(button);
     }
@@ -367,7 +419,7 @@ document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
                     quill.insertText(selection.index, compositionBuffer());
                     compositionReset();
                 } else {
-                    if (!composing) suggestEngine.recordWord(wordBeforeCursor(selection.index));
+                    if (!composing) recordCompletedWord(selection.index);
                     quill.insertText(selection.index, "\n");
                 }
                 //applyShift();
@@ -409,7 +461,7 @@ document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
                 if (selection.length) quill.deleteText(selection.index, selection.length);
 
                 if (!composing && !/\p{L}$/u.test(key)) {
-                    suggestEngine.recordWord(wordBeforeCursor(selection.index));
+                    recordCompletedWord(selection.index);
                 }
 
                 if (composing && entryElm.id === 'suggestions') {
@@ -455,7 +507,17 @@ document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
                         }
                     }
 
-                    quill.insertText(insertIndex, key);
+                    const display = entryElm.id === 'suggestions' ? button.getAttribute('data-text') : null;
+                    const typedPrefix = display ? wordBeforeCursor(selection.index) : '';
+
+                    if (display && typedPrefix && /^\p{Lu}/u.test(display) && !/^\p{Lu}/u.test(typedPrefix)) {
+                        // The suggestion starts with a capital the user did not type:
+                        // replace the typed prefix so the stored casing wins
+                        quill.deleteText(selection.index - typedPrefix.length, typedPrefix.length);
+                        quill.insertText(selection.index - typedPrefix.length, display);
+                    } else {
+                        quill.insertText(insertIndex, key);
+                    }
 
                     // Auto-spacing
                     if (autoSpaceEnabled && spaceAfterList.includes(key)) {
@@ -483,7 +545,7 @@ document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
                         quill.insertText(selection.index + key.length, ' ');
                         autoSpace = true;
                         nextWord = true;
-                        suggestEngine.recordWord(wordBeforeCursor(selection.index + key.length));
+                        recordCompletedWord(selection.index + key.length);
                     } else {
                         autoSpace = false;
                     }
@@ -507,13 +569,13 @@ document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
                 const selection = getSelection();
                 const text = textBefore(quill, selection.index);
 
-                renderSuggestions(suggestEngine.suggestAt(text, text.length));
+                renderSuggestions(suggestEngine.suggestAt(text, text.length), capitalizeSuggestions(text));
             } else if (nextWord) {
                 // Next-word suggestions after a completed word
                 const selection = getSelection();
                 const text = textBefore(quill, selection.index);
 
-                renderSuggestions(suggestEngine.nextWords(text));
+                renderSuggestions(suggestEngine.nextWords(text), capitalizeSuggestions(text));
             }
 
             quill.scrollSelectionIntoView();

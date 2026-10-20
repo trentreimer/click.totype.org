@@ -1,4 +1,4 @@
-import { settings, effectiveBehavior, setBehaviorOverride } from './settings.js';
+import { settings, effectiveBehavior, setBehaviorOverride, storageKey } from './settings.js';
 import { languages } from './languages.js';
 import { initLanguage, setLanguage, applyLanguageToDocument, suggestEngine, isUserWordsEnabled, setUserWordsEnabled } from './language-settings.js';
 import { setKeyboard, applyShift, toggleShift } from './keyboard.js';
@@ -54,29 +54,13 @@ function wordBeforeCursor(index) {
     return suggestEngine.wordAt(text, text.length);
 }
 
-function sentenceTerminators() {
-    const punctuation = settings.punctuation;
-
-    return punctuation && Array.isArray(punctuation.sentenceTerminators) ? punctuation.sentenceTerminators : ['.', '?', '!'];
-}
-
-function atSentenceStart(before) {
-    const trimmed = before.replace(/\s+$/, '');
-
-    return trimmed.length === 0 || sentenceTerminators().includes(trimmed.slice(-1));
-}
-
-// A completed word that starts a sentence may have received its capital from
-// auto-uppercase; tell the engine so it makes no casing claim for it.
+// The engine derives the completed word and its sentence position from the
+// editor text, so it decides by itself whether a leading capital came from
+// auto-uppercase (see the autoCapitalized property, synced below).
 function recordCompletedWord(index) {
-    const word = wordBeforeCursor(index);
+    const text = textBefore(quill, index);
 
-    if (!word) return;
-
-    const before = textBefore(quill, index - word.length);
-    const autoCapitalized = atSentenceStart(before) && effectiveBehavior('autoUppercase') && !languages[settings.language]?.caseless;
-
-    suggestEngine.recordWord(word, { autoCapitalized });
+    suggestEngine.recordWordAt(text, text.length);
 }
 
 function copyAllText() {
@@ -124,6 +108,10 @@ function updateBehaviorToggles() {
     document.querySelectorAll('#settings input[data-behavior]').forEach(input => {
         input.checked = effectiveBehavior(input.getAttribute('data-behavior'));
     });
+
+    // The engine owns sentence-start auto-capitalization: it applies the
+    // behavior when recording words and when rendering suggestions.
+    suggestEngine.autoCapitalized = effectiveBehavior('autoUppercase');
 
     const caseless = !!(languages[settings.language] && languages[settings.language].caseless);
     document.querySelector('.behavior-option input[data-behavior="autoUppercase"]')?.closest('.behavior-option').classList.toggle('hidden', caseless);
@@ -211,7 +199,7 @@ function closeLanguageList(refocus = true) {
 
 async function chooseLanguage(code) {
     await setLanguage(code);
-    localStorage.setItem('language', settings.language);
+    localStorage.setItem(storageKey('language'), settings.language);
     renderLanguage();
     updateBehaviorToggles();
     sizeDisplay();
@@ -328,41 +316,15 @@ document.addEventListener('click', function(event) {
     }
 });
 
-function capitalizeFirst(text) {
-    return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
-// Suggestions shown while the caret sits at a sentence start are capitalized
-// the way the auto-uppercase behavior would type them — but only when the
-// typed prefix already carries a capital (or there is no prefix), so a
-// deliberately lowercase start is left alone.
-function capitalizeSuggestions(text) {
-    if (languages[settings.language]?.caseless) return false;
-
-    const prefix = suggestEngine.wordAt(text, text.length);
-    const before = text.slice(0, text.length - prefix.length);
-
-    if (!atSentenceStart(before)) return false;
-    if (prefix) return /^\p{Lu}/u.test(prefix);
-
-    return effectiveBehavior('autoUppercase');
-}
-
-function renderSuggestions(suggestions, capitalize = false) {
+function renderSuggestions(suggestions) {
     const strip = document.getElementById('suggestions');
 
     for (const suggestion of suggestions) {
-        const display = capitalize && suggestion.text === suggestion.text.toLowerCase()
-            ? capitalizeFirst(suggestion.text)
-            : suggestion.text;
-        const insertSuffix = capitalize && suggestion.insertSuffix === suggestion.text
-            ? capitalizeFirst(suggestion.insertSuffix)
-            : suggestion.insertSuffix;
         const button = document.createElement('button');
 
-        button.setAttribute('data-key', insertSuffix);
-        button.setAttribute('data-text', display);
-        button.textContent = display;
+        button.setAttribute('data-key', suggestion.insertSuffix);
+        button.setAttribute('data-text', suggestion.text);
+        button.textContent = suggestion.text;
 
         strip.appendChild(button);
     }
@@ -495,7 +457,7 @@ document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
 
                     if (!composing && key === ' ') {
                         const before = textBefore(quill, insertIndex).replace(/\s+$/, '');
-                        nextWord = before.length > 0 && !sentenceTerminators.includes(before.slice(-1));
+                        nextWord = before.length > 0;
                     }
 
                     if (autoSpaceEnabled && spaceBeforeList.includes(key) && insertIndex > 0) {
@@ -550,7 +512,7 @@ document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
                         autoSpace = false;
                     }
 
-                    if (!composing && spaceAfterList.includes(key) && !sentenceTerminators.includes(key)) {
+                    if (!composing && spaceAfterList.includes(key)) {
                         nextWord = true;
                     }
                 }
@@ -569,13 +531,13 @@ document.querySelectorAll('#keyboard, #suggestions').forEach(entryElm => {
                 const selection = getSelection();
                 const text = textBefore(quill, selection.index);
 
-                renderSuggestions(suggestEngine.suggestAt(text, text.length), capitalizeSuggestions(text));
+                renderSuggestions(suggestEngine.suggestAt(text, text.length));
             } else if (nextWord) {
                 // Next-word suggestions after a completed word
                 const selection = getSelection();
                 const text = textBefore(quill, selection.index);
 
-                renderSuggestions(suggestEngine.nextWords(text), capitalizeSuggestions(text));
+                renderSuggestions(suggestEngine.nextWords(text));
             }
 
             quill.scrollSelectionIntoView();

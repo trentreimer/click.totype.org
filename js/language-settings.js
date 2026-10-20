@@ -1,13 +1,24 @@
 import { languages } from './languages.js';
-import { settings } from './settings.js';
+import { settings, storageKey, storagePrefix } from './settings.js';
 import { setKeyboard, applyShift } from './keyboard.js';
 import { loadComposition, compositionIdle } from './composition.js';
-import { SuggestEngine, voiceKanaChar, composeJamo, backspaceHangul } from 'https://cdn.jsdelivr.net/gh/trentreimer/suggest-engine@v0.11.4/dist/suggest-engine.esm.js';
+import { SuggestEngine, voiceKanaChar, composeJamo, backspaceHangul } from 'https://cdn.jsdelivr.net/gh/trentreimer/suggest-engine@v0.12.0/dist/suggest-engine.esm.js';
 
 export { voiceKanaChar, composeJamo, backspaceHangul };
 
-const userWordsStoragePrefix = 'ctt';
-const userWordsEnabledKey = `${userWordsStoragePrefix}:user-words-enabled`;
+const userWordsEnabledKey = storageKey('user-words-enabled');
+
+// Values written before storage keys were namespaced are dropped so a stale
+// key from another page on this origin can never influence the app.
+for (const key of ['language', 'ctt:user-words', 'ctt:user-words-enabled', 'ctt:personal-words', 'personal-words']) {
+    localStorage.removeItem(key);
+}
+
+function clearStoredUserWords() {
+    localStorage.removeItem(storageKey('user-words'));
+    localStorage.removeItem(storageKey('personal-words'));
+    localStorage.removeItem('personal-words');
+}
 
 function userWordsEnabled() {
     return localStorage.getItem(userWordsEnabledKey) !== 'off';
@@ -24,22 +35,16 @@ export function setUserWordsEnabled(enabled) {
         suggestEngine.enableUserWords();
     } else {
         suggestEngine.disableUserWords();
-        localStorage.removeItem(`${userWordsStoragePrefix}:user-words`);
-        localStorage.removeItem(`${userWordsStoragePrefix}:personal-words`);
-        localStorage.removeItem('personal-words');
+        clearStoredUserWords();
     }
 }
 
 export const suggestEngine = new SuggestEngine({
     maxSuggestions: 5,
-    ...(userWordsEnabled() ? { userWords: { storagePrefix: userWordsStoragePrefix } } : {}),
+    ...(userWordsEnabled() ? { userWords: { storagePrefix } } : {}),
 });
 
-if (!suggestEngine.userWordsEnabled) {
-    localStorage.removeItem(`${userWordsStoragePrefix}:user-words`);
-    localStorage.removeItem(`${userWordsStoragePrefix}:personal-words`);
-    localStorage.removeItem('personal-words');
-}
+if (!suggestEngine.userWordsEnabled) clearStoredUserWords();
 
 export function applyLanguageToDocument() {
     const meta = languages[settings.language];
@@ -112,7 +117,7 @@ export async function setLanguage(lang) {
 }
 
 export async function initLanguage() {
-    const stored = localStorage.getItem('language');
+    const stored = localStorage.getItem(storageKey('language'));
 
     if (stored && languages[stored.toLowerCase()]) {
         await setLanguage(stored);

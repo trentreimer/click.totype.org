@@ -1,8 +1,14 @@
 export const settings = {};
 
+export const storagePrefix = 'click.totype.org';
+
+export function storageKey(name) {
+    return `${storagePrefix}:${name}`;
+}
+
 const behaviorStorageKeys = {
-    autoSpace: 'behavior.autoSpace',
-    autoUppercase: 'behavior.autoUppercase',
+    autoSpace: storageKey('behavior.autoSpace'),
+    autoUppercase: storageKey('behavior.autoUppercase'),
 };
 
 export function behaviorOverride(name) {
